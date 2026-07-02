@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Bakslash\StaticSiteBundle\Tests;
 
-use Bakslash\StaticSiteBundle\ParamsProviderInterface;
-use Bakslash\StaticSiteBundle\Prerender;
-use Bakslash\StaticSiteBundle\PrerenderRouteLoader;
+use Bakslash\StaticSiteBundle\Attribute\Prerender;
+use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
+use Bakslash\StaticSiteBundle\Routing\PrerenderRouteLoader;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\Routing\Route;
@@ -25,7 +25,7 @@ final class PrerenderRouteLoaderTest extends TestCase
 
         $route = $collection->get('prerender_route');
         $this->assertInstanceOf(Route::class, $route);
-        $this->assertTrue($route->getDefault(Prerender::ROUTE_DEFAULTS_KEY));
+        $this->assertTrue($route->getDefault('_static_generation'));
     }
 
     public function testSetsStaticGenerationWithParams(): void
@@ -43,7 +43,7 @@ final class PrerenderRouteLoaderTest extends TestCase
             [
                 'params' => StubParamsProvider::class,
             ],
-            $route->getDefault(Prerender::ROUTE_DEFAULTS_KEY),
+            $route->getDefault('_static_generation'),
         );
     }
 
@@ -52,7 +52,7 @@ final class PrerenderRouteLoaderTest extends TestCase
         $routes = new RouteCollection();
         $routes->add('already_set', new Route('/already', [
             '_controller' => PrerenderController::class,
-            Prerender::ROUTE_DEFAULTS_KEY => [
+            '_static_generation' => [
                 'params' => [[
                     'id' => 'custom',
                 ]],
@@ -69,7 +69,7 @@ final class PrerenderRouteLoaderTest extends TestCase
                     'id' => 'custom',
                 ]],
             ],
-            $route->getDefault(Prerender::ROUTE_DEFAULTS_KEY),
+            $route->getDefault('_static_generation'),
         );
     }
 
@@ -84,7 +84,7 @@ final class PrerenderRouteLoaderTest extends TestCase
 
         $route = $collection->get('no_prerender');
         $this->assertInstanceOf(Route::class, $route);
-        $this->assertNull($route->getDefault(Prerender::ROUTE_DEFAULTS_KEY));
+        $this->assertNull($route->getDefault('_static_generation'));
     }
 
     public function testSkipsRoutesWithoutController(): void
@@ -96,7 +96,35 @@ final class PrerenderRouteLoaderTest extends TestCase
 
         $route = $collection->get('no_controller');
         $this->assertInstanceOf(Route::class, $route);
-        $this->assertNull($route->getDefault(Prerender::ROUTE_DEFAULTS_KEY));
+        $this->assertNull($route->getDefault('_static_generation'));
+    }
+
+    public function testSetsStaticGenerationFromClassLevelAttribute(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('class_level', new Route('/class-level', [
+            '_controller' => ClassLevelPrerenderController::class,
+        ]));
+
+        $collection = $this->load($routes);
+
+        $route = $collection->get('class_level');
+        $this->assertInstanceOf(Route::class, $route);
+        $this->assertTrue($route->getDefault('_static_generation'));
+    }
+
+    public function testSkipsControllerThatIsNotAClass(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('service_controller', new Route('/service', [
+            '_controller' => 'app.some_controller::index',
+        ]));
+
+        $collection = $this->load($routes);
+
+        $route = $collection->get('service_controller');
+        $this->assertInstanceOf(Route::class, $route);
+        $this->assertNull($route->getDefault('_static_generation'));
     }
 
     private function load(RouteCollection $routes): RouteCollection
@@ -129,6 +157,14 @@ final class PrerenderWithParamsController
     }
 }
 
+#[Prerender]
+final class ClassLevelPrerenderController
+{
+    public function __invoke(): void
+    {
+    }
+}
+
 final class NoAttributeController
 {
     public function __invoke(): void
@@ -138,7 +174,7 @@ final class NoAttributeController
 
 final class StubParamsProvider implements ParamsProviderInterface
 {
-    public function provideParams(): iterable
+    public function provideParameterSets(): iterable
     {
         return [];
     }

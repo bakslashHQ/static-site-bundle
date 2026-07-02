@@ -1,0 +1,49 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    tests:
+        name: "Tests (PHP ${{ matrix.php }}, ${{ matrix.dependencies }} deps)"
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                # lowest deps pull Symfony 7.4; highest on PHP 8.4 pulls the latest Symfony 8.x.
+                php: ['8.3', '8.4']
+                dependencies: ['lowest', 'highest']
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  coverage: none
+
+            - uses: ramsey/composer-install@v3
+              with:
+                  dependency-versions: ${{ matrix.dependencies }}
+
+            # "composer test" only displays deprecations; fail on them against the latest deps
+            # only, so newly deprecated APIs are caught without blocking the lowest job.
+            - run: composer test ${{ matrix.dependencies == 'highest' && '-- --fail-on-deprecation' || '' }}
+
+    quality:
+        name: Coding standards & static analysis
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  coverage: none
+
+            - uses: ramsey/composer-install@v3
+
+            - run: composer cs
+
+            - run: composer stan

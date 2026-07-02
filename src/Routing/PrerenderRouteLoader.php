@@ -2,14 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Bakslash\StaticSiteBundle;
+namespace Bakslash\StaticSiteBundle\Routing;
 
+use Bakslash\StaticSiteBundle\Attribute\Prerender;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\Config\Loader\LoaderResolverInterface;
 use Symfony\Component\Routing\RouteCollection;
 
+/**
+ * @internal
+ */
 final readonly class PrerenderRouteLoader implements LoaderInterface
 {
+    public const string ROUTE_DEFAULT = '_static_generation';
+
     public function __construct(
         private LoaderInterface $inner,
     ) {
@@ -29,7 +35,7 @@ final readonly class PrerenderRouteLoader implements LoaderInterface
                 continue;
             }
 
-            if (isset($route->getDefaults()[Prerender::ROUTE_DEFAULTS_KEY])) {
+            if (isset($route->getDefaults()[self::ROUTE_DEFAULT])) {
                 continue;
             }
 
@@ -38,11 +44,11 @@ final readonly class PrerenderRouteLoader implements LoaderInterface
                 continue;
             }
 
-            $config = $prerender->params !== null ? [
+            $config = null !== $prerender->params ? [
                 'params' => $prerender->params,
             ] : true;
             $route->addDefaults([
-                Prerender::ROUTE_DEFAULTS_KEY => $config,
+                self::ROUTE_DEFAULT => $config,
             ]);
         }
 
@@ -73,14 +79,22 @@ final readonly class PrerenderRouteLoader implements LoaderInterface
             $method = '__invoke';
         }
 
-        try {
-            $reflection = new \ReflectionMethod($class, $method);
-        } catch (\ReflectionException) {
+        // Controllers referenced by service id (rather than FQCN) cannot be reflected here.
+        if (!class_exists($class)) {
             return null;
         }
 
-        $attributes = $reflection->getAttributes(Prerender::class);
+        try {
+            $methodAttributes = (new \ReflectionMethod($class, $method))->getAttributes(Prerender::class);
+            if ([] !== $methodAttributes) {
+                return $methodAttributes[0]->newInstance();
+            }
+        } catch (\ReflectionException) {
+            // The method may not exist; fall back to a class-level attribute.
+        }
 
-        return $attributes !== [] ? $attributes[0]->newInstance() : null;
+        $classAttributes = (new \ReflectionClass($class))->getAttributes(Prerender::class);
+
+        return [] !== $classAttributes ? $classAttributes[0]->newInstance() : null;
     }
 }

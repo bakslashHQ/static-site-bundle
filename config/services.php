@@ -2,41 +2,57 @@
 
 declare(strict_types=1);
 
-use Bakslash\StaticSiteBundle\FilesystemStaticPageDumper;
-use Bakslash\StaticSiteBundle\PrerenderRouteLoader;
-use Bakslash\StaticSiteBundle\StaticPagesGenerator;
-use Bakslash\StaticSiteBundle\StaticPageUrisProvider;
-use Sensiolabs\MinifyBundle\Minifier\MinifierInterface;
+use Bakslash\StaticSiteBundle\Command\GenerateStaticSiteCommand;
+use Bakslash\StaticSiteBundle\Dumper\FlysystemDumper;
+use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
+use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
+use Bakslash\StaticSiteBundle\Renderer\PageRenderer;
+use Bakslash\StaticSiteBundle\Routing\PrerenderRouteLoader;
+use Bakslash\StaticSiteBundle\UriProvider\RouteUriProvider;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+
+use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_locator;
 
 return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
-    $services->defaults()
-        ->autowire()
-        ->autoconfigure();
-
-    $services->load('Bakslash\\StaticSiteBundle\\', \dirname(__DIR__) . '/src/')
-        ->exclude([
-            \dirname(__DIR__) . '/src/BakslashStaticSiteBundle.php',
-            \dirname(__DIR__) . '/src/Prerender.php',
+    $services->set('.bakslash_static_site.routing.prerender_route_loader', PrerenderRouteLoader::class)
+        ->decorate('routing.loader')
+        ->args([
+            service('.inner'),
         ]);
 
-    $services->get(PrerenderRouteLoader::class)
-        ->decorate('routing.loader')
-        ->arg('$inner', service('.inner'));
+    $services->set('bakslash_static_site.uri_provider', RouteUriProvider::class)
+        ->args([
+            service('router'),
+            tagged_locator(ParamsProviderInterface::TAG),
+        ]);
 
-    $services->get(StaticPageUrisProvider::class)
-        ->arg('$paramsProviders', tagged_locator('ssg.params_provider', 'key'));
+    $services->set('bakslash_static_site.renderer', PageRenderer::class)
+        ->args([
+            service('http_kernel'),
+            service('services_resetter'),
+            service('router.request_context'),
+            param('bakslash_static_site.base_uri'),
+        ]);
 
-    $services->get(StaticPagesGenerator::class)
-        ->arg('$kernel', service('http_kernel'))
-        ->arg('$baseUri', '%bakslash_static_site.base_uri%')
-        ->arg('$basePath', '%bakslash_static_site.base_path%');
+    $services->set('bakslash_static_site.dumper', FlysystemDumper::class)
+        ->args([
+            service('bakslash_static_site.filesystem'),
+        ]);
 
-    $services->get(FilesystemStaticPageDumper::class)
-        ->arg('$minify', service(MinifierInterface::class))
-        ->arg('$outputDir', '%bakslash_static_site.output_dir%');
+    $services->set('.bakslash_static_site.generator', StaticSiteGenerator::class)
+        ->args([
+            service('bakslash_static_site.uri_provider'),
+            service('bakslash_static_site.renderer'),
+            service('bakslash_static_site.dumper'),
+        ]);
+
+    $services->set('.bakslash_static_site.command.generate', GenerateStaticSiteCommand::class)
+        ->args([
+            service('.bakslash_static_site.generator'),
+        ])
+        ->tag('console.command');
 };

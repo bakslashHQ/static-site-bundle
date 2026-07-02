@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Bakslash\StaticSiteBundle;
+namespace Bakslash\StaticSiteBundle\UriProvider;
 
-interface StaticPageUrisProviderInterface
+interface UriProviderInterface
 {
     /**
      * @return iterable<string>
