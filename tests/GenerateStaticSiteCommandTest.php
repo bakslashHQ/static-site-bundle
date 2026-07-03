@@ -24,24 +24,43 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $renderer = $this->createStub(RendererInterface::class);
         $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
 
-        $generator = new StaticSiteGenerator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
+        $generator = new StaticSiteGenerator($this->uriProvider(['/a', '/b']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
 
-        $this->assertSame(0, (new GenerateStaticSiteCommand($generator))->__invoke($this->io()));
+        [$exit, $display] = $this->invoke($generator);
+
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('Generated 2 page(s).', $display);
     }
 
-    public function testReturnsFailureWhenAPageFails(): void
+    public function testReportsFailuresAndReturnsFailure(): void
     {
         $renderer = $this->createStub(RendererInterface::class);
-        $renderer->method('render')->willThrowException(new RenderingException('boom'));
+        $renderer->method('render')->willReturnCallback(static function (string $uri): RenderedPage {
+            if ('/bad' === $uri) {
+                throw new RenderingException('boom');
+            }
 
-        $generator = new StaticSiteGenerator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
+            return new RenderedPage('content', 'html');
+        });
 
-        $this->assertSame(1, (new GenerateStaticSiteCommand($generator))->__invoke($this->io()));
+        $generator = new StaticSiteGenerator($this->uriProvider(['/ok', '/bad']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
+
+        [$exit, $display] = $this->invoke($generator);
+
+        $this->assertSame(1, $exit);
+        $this->assertStringContainsString('/bad: boom', $display);
+        $this->assertStringContainsString('1 failed', $display);
     }
 
-    private function io(): SymfonyStyle
+    /**
+     * @return array{int, string}
+     */
+    private function invoke(StaticSiteGenerator $generator): array
     {
-        return new SymfonyStyle(new ArrayInput([]), new BufferedOutput());
+        $output = new BufferedOutput();
+        $exit = (new GenerateStaticSiteCommand($generator))->__invoke(new SymfonyStyle(new ArrayInput([]), $output));
+
+        return [$exit, $output->fetch()];
     }
 
     /**

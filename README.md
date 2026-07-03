@@ -115,6 +115,9 @@ You can also pass an inline list of parameter sets:
 bin/console static-site:generate
 ```
 
+On an interactive terminal the command shows a live counter of generated pages; pass `-v` to
+list each page instead. Failures are always printed, and it exits non-zero if any page failed.
+
 The command **only writes pages, and never deletes anything.** When you remove or rename a
 route, its previously generated file stays in `storage`; you are responsible for removing
 stale files yourself. The natural place to do that (it also gives you atomic publishing) is
