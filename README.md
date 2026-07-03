@@ -138,8 +138,14 @@ least overhead, and make sure any stateful service of your own implements
 Pages are written as `<path>.html`, and `/` as `index.html`. For example the route
 `/articles/{slug}` becomes `articles/<slug>.html`. Point your server's document root at the
 generated directory and have it serve `foo.html` when `/foo` is requested. For a custom
-error page, add a prerendered `/404` route; it is written as `404.html`, which the examples
-below reference.
+error page, add a prerendered `/404` route that returns a 200 response with your error markup;
+it is written as `404.html`, which the examples below reference (the server sets the actual
+404 status).
+
+A route that returns a redirect (3xx) is written as a static meta-refresh stub pointing at its
+`Location`, so public canonical redirects work on any host. Because of this, don't prerender
+authenticated routes: an unauthenticated generation request would capture their login
+redirect. Any other non-2xx response fails the page (so bugs and stale data surface).
 
 If you set `clean_urls: true`, pages are written as `<path>/index.html` instead, and every
 server serves clean URLs out of the box, so the rewrite rules below become unnecessary.

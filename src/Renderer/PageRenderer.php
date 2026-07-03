@@ -46,8 +46,15 @@ final readonly class PageRenderer implements RendererInterface
                 throw new RenderingException(\sprintf('Cannot render page for URI "%s": %s', $uri, $exception->getMessage()), previous: $exception);
             }
 
-            if (Response::HTTP_OK !== $response->getStatusCode()) {
-                throw new RenderingException(\sprintf('Expected URI "%s" to return HTTP 200, got %d.', $uri, $response->getStatusCode()));
+            $status = $response->getStatusCode();
+
+            if ($status >= 300 && $status < 400) {
+                // A redirect becomes a static meta-refresh stub pointing at its target.
+                return new RenderedPage($this->redirectStub((string) $response->headers->get('Location', '')), 'html');
+            }
+
+            if (Response::HTTP_OK !== $status) {
+                throw new RenderingException(\sprintf('Expected URI "%s" to return HTTP 200 or a redirect, got %d.', $uri, $status));
             }
 
             $content = $response->getContent();
@@ -66,6 +73,19 @@ final readonly class PageRenderer implements RendererInterface
         } finally {
             $this->servicesResetter->reset();
         }
+    }
+
+    private function redirectStub(string $location): string
+    {
+        $target = htmlspecialchars($location, \ENT_QUOTES);
+
+        return \sprintf(
+            '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=%s"><link rel="canonical" href="%s"><title>Redirecting</title></head><body>Redirecting to <a href="%s">%s</a>.</body></html>',
+            $target,
+            $target,
+            $target,
+            $target,
+        );
     }
 
     /**

@@ -111,8 +111,20 @@ final class PageRendererTest extends TestCase
         $kernel->method('handle')->willReturn(new Response('not-found', Response::HTTP_NOT_FOUND));
 
         $this->expectException(RenderingException::class);
-        $this->expectExceptionMessageIs('Expected URI "/whatever" to return HTTP 200, got 404.');
+        $this->expectExceptionMessageIs('Expected URI "/whatever" to return HTTP 200 or a redirect, got 404.');
         $this->renderer($kernel)->render('/whatever');
+    }
+
+    public function testRedirectProducesAMetaRefreshStub(): void
+    {
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('', Response::HTTP_FOUND, ['Location' => '/new']));
+
+        $page = $this->renderer($kernel)->render('/old');
+
+        $this->assertSame('html', $page->format);
+        $this->assertStringContainsString('http-equiv="refresh"', $page->content);
+        $this->assertStringContainsString('0; url=/new', $page->content);
     }
 
     public function testThrowOnException(): void
