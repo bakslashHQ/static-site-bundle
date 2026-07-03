@@ -125,6 +125,14 @@ aws s3 sync build/ s3://my-bucket --delete
 Generation is not atomic either, so publish the generated output rather than pointing your
 web server directly at `storage` during a build.
 
+### Large sites
+
+Pages are rendered one at a time in a single process, and the bundle resets Symfony's
+stateful services (`kernel.reset`, e.g. Doctrine's identity map) between each one, so memory
+stays flat no matter how many pages you generate. Run generation with `APP_ENV=prod` for the
+least overhead, and make sure any stateful service of your own implements
+`Symfony\Contracts\Service\ResetInterface` so it is reset between pages too.
+
 ## Serving the generated site
 
 Pages are written as `<path>.html`, and `/` as `index.html`. For example the route
