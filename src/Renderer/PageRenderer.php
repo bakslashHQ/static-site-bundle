@@ -41,6 +41,9 @@ final readonly class PageRenderer implements RendererInterface
 
         try {
             try {
+                // The kernel is handled but deliberately never terminate()d, so kernel.terminate
+                // work (deferred emails, Messenger dispatch, ...) does not fire for every page.
+                // "catch: false" lets a real controller error surface instead of becoming a 500.
                 $response = $this->kernel->handle($request, HttpKernelInterface::MAIN_REQUEST, false);
             } catch (\Throwable $exception) {
                 throw new RenderingException(\sprintf('Cannot render page for URI "%s": %s', $uri, $exception->getMessage()), previous: $exception);

@@ -9,6 +9,9 @@ Mark the controllers you want to export as static with the `#[Prerender]`
 attribute, then run a single command. The bundle boots the kernel for each
 matching route, captures the rendered response and writes it to the configured storage.
 
+The kernel is handled but not terminated between pages, so `kernel.terminate` work (deferred
+emails, Messenger dispatch, ...) does not run during generation.
+
 ## Installation
 
 ```bash
