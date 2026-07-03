@@ -32,19 +32,4 @@ final readonly class FlysystemDumper implements DumperInterface
             throw new DumpingException(\sprintf('Cannot dump page for URI "%s".', $uri), previous: $exception);
         }
     }
-
-    public function purge(): void
-    {
-        try {
-            foreach ($this->filesystem->listContents('', false) as $item) {
-                if ($item->isDir()) {
-                    $this->filesystem->deleteDirectory($item->path());
-                } else {
-                    $this->filesystem->delete($item->path());
-                }
-            }
-        } catch (FilesystemException $exception) {
-            throw new DumpingException('Cannot purge the previously generated pages.', previous: $exception);
-        }
-    }
 }

@@ -22,11 +22,6 @@ final readonly class StaticSiteGenerator
     ) {
     }
 
-    public function purge(): void
-    {
-        $this->dumper->purge();
-    }
-
     /**
      * @return iterable<GenerationResult>
      */

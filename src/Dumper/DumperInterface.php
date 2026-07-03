@@ -12,11 +12,4 @@ interface DumperInterface
      * @throws DumpingException
      */
     public function dump(string $uri, string $content, ?string $format = null): void;
-
-    /**
-     * Removes everything previously dumped.
-     *
-     * @throws DumpingException
-     */
-    public function purge(): void;
 }

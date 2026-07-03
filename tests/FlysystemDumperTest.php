@@ -6,11 +6,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Dumper\FlysystemDumper;
 use Bakslash\StaticSiteBundle\Exception\DumpingException;
-use League\Flysystem\DirectoryAttributes;
-use League\Flysystem\DirectoryListing;
-use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemOperator;
-use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToWriteFile;
 use PHPUnit\Framework\TestCase;
 
@@ -66,31 +62,5 @@ final class FlysystemDumperTest extends TestCase
         $this->expectException(DumpingException::class);
         $this->expectExceptionMessageIs('Cannot dump page for URI "/foo".');
         $dumper->dump('/foo', 'content');
-    }
-
-    public function testPurgeDeletesEveryTopLevelEntry(): void
-    {
-        $filesystem = $this->createMock(FilesystemOperator::class);
-        $filesystem->method('listContents')->willReturn(new DirectoryListing([
-            new FileAttributes('foo.html'),
-            new DirectoryAttributes('articles'),
-        ]));
-        $filesystem->expects($this->once())->method('delete')->with('foo.html');
-        $filesystem->expects($this->once())->method('deleteDirectory')->with('articles');
-
-        (new FlysystemDumper($filesystem))->purge();
-    }
-
-    public function testThrowsDumpingExceptionWhenPurgeFails(): void
-    {
-        $filesystem = $this->createStub(FilesystemOperator::class);
-        $filesystem->method('listContents')->willReturn(new DirectoryListing([new FileAttributes('foo.html')]));
-        $filesystem->method('delete')->willThrowException(UnableToDeleteFile::atLocation('foo.html'));
-
-        $dumper = new FlysystemDumper($filesystem);
-
-        $this->expectException(DumpingException::class);
-        $this->expectExceptionMessageIs('Cannot purge the previously generated pages.');
-        $dumper->purge();
     }
 }

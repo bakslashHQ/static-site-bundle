@@ -105,12 +105,104 @@ You can also pass an inline list of parameter sets:
 ### Generating the site
 
 ```bash
-# Generate every prerenderable page.
 bin/console static-site:generate
-
-# Purge previously generated files first.
-bin/console static-site:generate --purge
 ```
+
+The command **only writes pages — it never deletes anything.** When you remove or rename a
+route, its previously generated file stays in `storage`; you are responsible for removing
+stale files yourself. The natural place to do that (it also gives you atomic publishing) is
+your deploy step, which is built for it:
+
+```bash
+rsync -a --delete build/ user@host:/var/www/site/
+aws s3 sync build/ s3://my-bucket --delete
+```
+
+Generation is not atomic either, so publish the generated output rather than pointing your
+web server directly at `storage` during a build.
+
+## Serving the generated site
+
+Pages are written as `<path>.html`, and `/` as `index.html` — for example the route
+`/articles/{slug}` becomes `articles/<slug>.html`. Point your server's document root at the
+generated directory and have it serve `foo.html` when `/foo` is requested. For a custom
+error page, add a prerendered `/404` route; it is written as `404.html`, which the examples
+below reference.
+
+### Caddy
+
+```caddyfile
+example.com {
+    root * /var/www/site
+    encode zstd gzip
+    try_files {path} {path}.html {path}/index.html
+    file_server
+
+    handle_errors {
+        rewrite * /404.html
+        file_server
+    }
+}
+```
+
+### nginx
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+    root /var/www/site;
+
+    location / {
+        try_files $uri $uri.html $uri/index.html =404;
+    }
+
+    error_page 404 /404.html;
+}
+```
+
+### Apache
+
+```apache
+# .htaccess at the document root
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.html -f
+RewriteRule ^ %{REQUEST_URI}.html [L]
+```
+
+### GitHub Pages
+
+GitHub Pages already serves `foo.html` at `/foo`, `index.html` for directories, and
+`404.html` for missing pages — no rewrite rules are needed. Add an empty `.nojekyll` file to
+the output so the files are served verbatim, then publish the generated directory (build
+steps depend on your app):
+
+```yaml
+# .github/workflows/deploy.yml — inside a job with pages: write + id-token: write
+- run: bin/console static-site:generate
+- run: touch build/.nojekyll
+- uses: actions/upload-pages-artifact@v3
+  with:
+      path: build
+- uses: actions/deploy-pages@v4
+```
+
+### Cloudflare Pages
+
+Cloudflare Pages also serves `foo.html` at `/foo`, `index.html` for directories, and
+`404.html` automatically — no rewrite rules are needed. Deploy the generated directory
+directly, or point a Git integration's output directory at it:
+
+```bash
+npx wrangler pages deploy build --project-name my-site
+```
+
+Optional `_redirects` and `_headers` files placed in the output are honoured.
 
 ## Custom renderer or dumper
 

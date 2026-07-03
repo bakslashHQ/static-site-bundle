@@ -38,26 +38,6 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $this->assertSame(1, (new GenerateStaticSiteCommand($generator))->__invoke($this->io()));
     }
 
-    public function testPurgeOptionPurgesBeforeGenerating(): void
-    {
-        $dumper = $this->createMock(DumperInterface::class);
-        $dumper->expects($this->once())->method('purge');
-
-        $generator = new StaticSiteGenerator($this->uriProvider([]), $this->createStub(RendererInterface::class), $dumper);
-
-        (new GenerateStaticSiteCommand($generator))->__invoke($this->io(), purge: true);
-    }
-
-    public function testDoesNotPurgeWithoutTheOption(): void
-    {
-        $dumper = $this->createMock(DumperInterface::class);
-        $dumper->expects($this->never())->method('purge');
-
-        $generator = new StaticSiteGenerator($this->uriProvider([]), $this->createStub(RendererInterface::class), $dumper);
-
-        (new GenerateStaticSiteCommand($generator))->__invoke($this->io());
-    }
-
     private function io(): SymfonyStyle
     {
         return new SymfonyStyle(new ArrayInput([]), new BufferedOutput());

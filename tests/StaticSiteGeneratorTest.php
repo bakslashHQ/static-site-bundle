@@ -32,26 +32,6 @@ final class StaticSiteGeneratorTest extends TestCase
         $this->assertTrue($results[1]->successful);
     }
 
-    public function testPurgeDelegatesToTheDumper(): void
-    {
-        $dumper = $this->createMock(DumperInterface::class);
-        $dumper->expects($this->once())->method('purge');
-
-        $generator = new StaticSiteGenerator($this->uriProvider([]), $this->createStub(RendererInterface::class), $dumper);
-
-        $generator->purge();
-    }
-
-    public function testGenerateDoesNotPurge(): void
-    {
-        $dumper = $this->createMock(DumperInterface::class);
-        $dumper->expects($this->never())->method('purge');
-
-        $generator = new StaticSiteGenerator($this->uriProvider([]), $this->createStub(RendererInterface::class), $dumper);
-
-        iterator_to_array($generator->generate());
-    }
-
     public function testRenderFailureYieldsFailureResultAndKeepsGoing(): void
     {
         $renderer = $this->createStub(RendererInterface::class);

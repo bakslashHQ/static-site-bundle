@@ -6,7 +6,6 @@ namespace Bakslash\StaticSiteBundle\Command;
 
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Symfony\Component\Console\Attribute\AsCommand;
-use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -22,15 +21,8 @@ final readonly class GenerateStaticSiteCommand
     ) {
     }
 
-    public function __invoke(
-        SymfonyStyle $io,
-        #[Option(description: 'Purge previously generated pages before generating')]
-        bool $purge = false,
-    ): int {
-        if ($purge) {
-            $this->generator->purge();
-        }
-
+    public function __invoke(SymfonyStyle $io): int
+    {
         $generated = 0;
         $failed = 0;
         foreach ($this->generator->generate() as $result) {

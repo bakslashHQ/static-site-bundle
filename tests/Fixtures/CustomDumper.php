@@ -11,8 +11,4 @@ final class CustomDumper implements DumperInterface
     public function dump(string $uri, string $content, ?string $format = null): void
     {
     }
-
-    public function purge(): void
-    {
-    }
 }
