@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bakslash\StaticSiteBundle\Command\GenerateStaticSiteCommand;
+use Bakslash\StaticSiteBundle\Command\ListStaticSiteCommand;
 use Bakslash\StaticSiteBundle\Dumper\FlysystemDumper;
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
@@ -55,6 +56,12 @@ return static function (ContainerConfigurator $container): void {
     $services->set('.bakslash_static_site.command.generate', GenerateStaticSiteCommand::class)
         ->args([
             service('.bakslash_static_site.generator'),
+        ])
+        ->tag('console.command');
+
+    $services->set('.bakslash_static_site.command.list', ListStaticSiteCommand::class)
+        ->args([
+            service('bakslash_static_site.uri_provider'),
         ])
         ->tag('console.command');
 };

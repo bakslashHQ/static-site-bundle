@@ -6,6 +6,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
+use Bakslash\StaticSiteBundle\UriProvider\GenerationFilter;
 use Bakslash\StaticSiteBundle\UriProvider\RouteUriProvider;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use PHPUnit\Framework\TestCase;
@@ -207,6 +208,28 @@ final class RouteUriProviderTest extends TestCase
         $this->assertSame('/article/ok', $results[0]);
         $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
         $this->assertStringContainsString('route "article"', $results[1]->identifier);
+    }
+
+    public function testFiltersByRouteName(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('blog', new Route('/blog', ['_static_generation' => true]));
+        $routes->add('shop', new Route('/shop', ['_static_generation' => true]));
+
+        $provider = new RouteUriProvider($this->createRouter($routes), $this->createStub(ServiceLocator::class));
+
+        $this->assertSame(['/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog']))));
+    }
+
+    public function testFiltersByPath(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('blog', new Route('/blog', ['_static_generation' => true]));
+        $routes->add('shop', new Route('/shop', ['_static_generation' => true]));
+
+        $provider = new RouteUriProvider($this->createRouter($routes), $this->createStub(ServiceLocator::class));
+
+        $this->assertSame(['/shop'], iterator_to_array($provider->provide(new GenerationFilter(paths: ['/shop*']))));
     }
 
     private function createRouter(RouteCollection $routes): Router

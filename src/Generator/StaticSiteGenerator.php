@@ -11,6 +11,7 @@ use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
 use Bakslash\StaticSiteBundle\Exception\DumpingException;
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Renderer\RendererInterface;
+use Bakslash\StaticSiteBundle\UriProvider\GenerationFilter;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -31,11 +32,11 @@ final readonly class StaticSiteGenerator
     /**
      * @return iterable<GenerationResult>
      */
-    public function generate(): iterable
+    public function generate(?GenerationFilter $filter = null): iterable
     {
         $seen = [];
 
-        foreach ($this->uriProvider->provide() as $item) {
+        foreach ($this->uriProvider->provide($filter) as $item) {
             if ($item instanceof UriGenerationFailure) {
                 $this->eventDispatcher->dispatch(new PageFailedEvent($item->identifier, $item->error));
 

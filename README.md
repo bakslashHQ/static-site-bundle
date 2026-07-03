@@ -118,6 +118,20 @@ bin/console static-site:generate
 On an interactive terminal the command shows a live counter of generated pages; pass `-v` to
 list each page instead. Failures are always printed, and it exits non-zero if any page failed.
 
+To regenerate only part of the site, filter by route name or by URI. Both options accept
+[glob patterns](https://www.php.net/fnmatch) and are repeatable:
+
+```bash
+bin/console static-site:generate --route='blog_*' --path='/blog/*'
+```
+
+To preview what would be generated without writing anything, run `static-site:list`, which
+takes the same `--route`/`--path` options:
+
+```bash
+bin/console static-site:list
+```
+
 The command **only writes pages, and never deletes anything.** When you remove or rename a
 route, its previously generated file stays in `storage`; you are responsible for removing
 stale files yourself. The natural place to do that (it also gives you atomic publishing) is

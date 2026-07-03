@@ -26,13 +26,17 @@ final readonly class RouteUriProvider implements UriProviderInterface
     ) {
     }
 
-    public function provide(): iterable
+    public function provide(?GenerationFilter $filter = null): iterable
     {
+        $filter ??= new GenerationFilter();
         $baseUrl = $this->router->getContext()->getBaseUrl();
 
-        foreach ($this->generatableRoutes() as $routeName => $params) {
+        foreach ($this->generatableRoutes($filter) as $routeName => $params) {
             if (null === $params) {
-                yield $this->stripBaseUrl($this->generate($routeName, []), $baseUrl);
+                $uri = $this->stripBaseUrl($this->generate($routeName, []), $baseUrl);
+                if ($filter->matchesPath($uri)) {
+                    yield $uri;
+                }
 
                 continue;
             }
@@ -47,7 +51,10 @@ final readonly class RouteUriProvider implements UriProviderInterface
                     continue;
                 }
 
-                yield $this->stripBaseUrl($uri, $baseUrl);
+                $uri = $this->stripBaseUrl($uri, $baseUrl);
+                if ($filter->matchesPath($uri)) {
+                    yield $uri;
+                }
             }
         }
     }
@@ -59,13 +66,17 @@ final readonly class RouteUriProvider implements UriProviderInterface
      *
      * @return array<string, class-string<ParamsProviderInterface>|list<array<string, mixed>>|null>
      */
-    private function generatableRoutes(): array
+    private function generatableRoutes(GenerationFilter $filter): array
     {
         $routes = [];
 
         foreach ($this->router->getRouteCollection() as $routeName => $route) {
             $config = $route->getDefaults()[PrerenderRouteLoader::ROUTE_DEFAULT] ?? null;
             if (!$config) {
+                continue;
+            }
+
+            if (!$filter->matchesRoute($routeName)) {
                 continue;
             }
 
