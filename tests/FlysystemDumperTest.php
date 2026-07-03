@@ -28,6 +28,14 @@ final class FlysystemDumperTest extends TestCase
         (new FlysystemDumper($filesystem))->dump('/', '<html></html>');
     }
 
+    public function testWritesRootWithTheFormatExtension(): void
+    {
+        $filesystem = $this->createMock(FilesystemOperator::class);
+        $filesystem->expects($this->once())->method('write')->with('index.xml', '<feed/>');
+
+        (new FlysystemDumper($filesystem))->dump('/', '<feed/>', 'xml');
+    }
+
     public function testAppendsTheFormatExtension(): void
     {
         $filesystem = $this->createMock(FilesystemOperator::class);
@@ -44,10 +52,10 @@ final class FlysystemDumperTest extends TestCase
         (new FlysystemDumper($filesystem))->dump('/feed.xml', '<feed/>', 'xml');
     }
 
-    public function testWritesWithoutAFormat(): void
+    public function testDefaultsToHtmlWithoutAFormat(): void
     {
         $filesystem = $this->createMock(FilesystemOperator::class);
-        $filesystem->expects($this->once())->method('write')->with('page', 'content');
+        $filesystem->expects($this->once())->method('write')->with('page.html', 'content');
 
         (new FlysystemDumper($filesystem))->dump('/page', 'content');
     }

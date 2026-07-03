@@ -21,11 +21,13 @@ final readonly class FlysystemDumper implements DumperInterface
 
     public function dump(string $uri, string $content, ?string $format = null): void
     {
+        $format ??= 'html';
+
         $path = ltrim(match (true) {
-            '/' === $uri => 'index.html',
+            '/' === $uri => 'index.'.$format,
             'html' === $format && $this->cleanUrls => trim($uri, '/').'/index.html',
-            $format && !str_ends_with($uri, '.'.$format) => \sprintf('%s.%s', $uri, $format),
-            default => $uri,
+            str_ends_with($uri, '.'.$format) => $uri,
+            default => $uri.'.'.$format,
         }, '/');
 
         try {

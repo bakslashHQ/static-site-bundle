@@ -55,7 +55,14 @@ final readonly class PageRenderer implements RendererInterface
                 throw new RenderingException(\sprintf('URI "%s" returned a response whose content cannot be captured (streamed and binary responses are not supported).', $uri));
             }
 
-            return new RenderedPage($content, $request->getRequestFormat() ?? 'html');
+            // The extension follows the route's explicit format if it declares one, else what
+            // the content actually is (the response Content-Type), else HTML.
+            $contentType = $response->headers->get('Content-Type');
+            $format = $request->getRequestFormat(null)
+                ?? ($contentType ? $request->getFormat($contentType) : null)
+                ?? 'html';
+
+            return new RenderedPage($content, $format);
         } finally {
             $this->servicesResetter->reset();
         }

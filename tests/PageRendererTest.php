@@ -28,10 +28,22 @@ final class PageRendererTest extends TestCase
         $this->assertSame('html', $page->format);
     }
 
-    public function testRenderUsesRouteFormatOverContentType(): void
+    public function testDerivesFormatFromResponseContentType(): void
     {
-        // Simulates Symfony's router setting the route format on the request,
-        // independently of the response's Content-Type (e.g. atom+xml -> "xml" route format).
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('{}', headers: [
+            'Content-Type' => 'application/json',
+        ]));
+
+        $page = $this->renderer($kernel)->render('/api/data');
+
+        $this->assertSame('json', $page->format);
+    }
+
+    public function testPrefersTheExplicitRequestFormatOverContentType(): void
+    {
+        // The route declares "xml" (e.g. a ".xml" feed), so that wins over the response's
+        // application/atom+xml Content-Type.
         $kernel = $this->createStub(HttpKernelInterface::class);
         $kernel->method('handle')->willReturnCallback(static function (Request $request): Response {
             $request->setRequestFormat('xml');
