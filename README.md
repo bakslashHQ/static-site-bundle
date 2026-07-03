@@ -285,7 +285,7 @@ subscriber:
 | Event | When | Typical use |
 | --- | --- | --- |
 | `Event\PageRenderedEvent` | after a page renders, before it is written | transform the page (`$event->setPage(...)`) |
-| `Event\PageDumpedEvent` | after a page is written | collect the generated URIs (e.g. a sitemap) |
+| `Event\PageDumpedEvent` | after a page is written | collect the generated URIs (e.g. a build manifest) |
 | `Event\PageFailedEvent` | a page could not be generated | react to failures (log, notify); covers URI, render and write failures |
 
 For example, to rewrite links in every generated page:
