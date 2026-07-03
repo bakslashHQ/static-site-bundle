@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 /**
  * Exercises the params-provider extension point end to end: a ParamsProviderInterface
  * implementation, only autoconfigured (so the bundle tags it and the locator can resolve
- * it by service id), drives a parameterized route.
+ * it by service id), drives a parameterized route. Also exercises clean-URL output.
  */
 final class DynamicRouteKernel extends TestKernel
 {
@@ -26,6 +26,7 @@ final class DynamicRouteKernel extends TestKernel
 
         $container->extension('bakslash_static_site', [
             'storage' => $this->getOutputDir(),
+            'clean_urls' => true,
         ]);
 
         $services = $container->services();

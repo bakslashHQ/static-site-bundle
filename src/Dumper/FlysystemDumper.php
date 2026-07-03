@@ -15,6 +15,7 @@ final readonly class FlysystemDumper implements DumperInterface
 {
     public function __construct(
         private FilesystemOperator $filesystem,
+        private bool $cleanUrls = false,
     ) {
     }
 
@@ -22,6 +23,7 @@ final readonly class FlysystemDumper implements DumperInterface
     {
         $path = ltrim(match (true) {
             '/' === $uri => 'index.html',
+            'html' === $format && $this->cleanUrls => trim($uri, '/').'/index.html',
             $format && !str_ends_with($uri, '.'.$format) => \sprintf('%s.%s', $uri, $format),
             default => $uri,
         }, '/');

@@ -32,6 +32,10 @@ final class BakslashStaticSiteBundle extends AbstractBundle
                     ->info('Minify generated HTML and XML pages (requires sensiolabs/minify-bundle).')
                     ->defaultFalse()
                 ->end()
+                ->booleanNode('clean_urls')
+                    ->info('Write HTML pages as "<path>/index.html" instead of "<path>.html", so the site serves clean URLs with no server rewrite rules.')
+                    ->defaultFalse()
+                ->end()
                 ->scalarNode('storage')
                     ->info('Where the generated site is written: a local directory path, or a Flysystem operator service reference ("@service_id").')
                     ->defaultValue('%kernel.project_dir%/build')
@@ -48,12 +52,13 @@ final class BakslashStaticSiteBundle extends AbstractBundle
     }
 
     /**
-     * @param array{storage: string, base_uri: string, minify: bool} $config
+     * @param array{storage: string, base_uri: string, minify: bool, clean_urls: bool} $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $builder->setParameter('bakslash_static_site.base_uri', $config['base_uri']);
         $builder->setParameter('bakslash_static_site.minify', $config['minify']);
+        $builder->setParameter('bakslash_static_site.clean_urls', $config['clean_urls']);
 
         $builder->registerForAutoconfiguration(ParamsProviderInterface::class)
             ->addTag(ParamsProviderInterface::TAG);

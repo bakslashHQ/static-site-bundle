@@ -63,4 +63,28 @@ final class FlysystemDumperTest extends TestCase
         $this->expectExceptionMessageIs('Cannot dump page for URI "/foo".');
         $dumper->dump('/foo', 'content');
     }
+
+    public function testWritesCleanUrlAsADirectoryIndex(): void
+    {
+        $filesystem = $this->createMock(FilesystemOperator::class);
+        $filesystem->expects($this->once())->method('write')->with('articles/bar/index.html', 'content');
+
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/articles/bar', 'content', 'html');
+    }
+
+    public function testWritesRootAsIndexHtmlWithCleanUrls(): void
+    {
+        $filesystem = $this->createMock(FilesystemOperator::class);
+        $filesystem->expects($this->once())->method('write')->with('index.html', '<html></html>');
+
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/', '<html></html>', 'html');
+    }
+
+    public function testKeepsNonHtmlFilesWithCleanUrls(): void
+    {
+        $filesystem = $this->createMock(FilesystemOperator::class);
+        $filesystem->expects($this->once())->method('write')->with('feed.xml', '<feed/>');
+
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/feed', '<feed/>', 'xml');
+    }
 }

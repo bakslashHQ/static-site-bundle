@@ -39,10 +39,11 @@ final class DynamicRouteGenerationTest extends KernelTestCase
 
         $this->assertSame(0, $exitCode, $tester->getDisplay());
 
+        // clean_urls is enabled, so pages are written as "<path>/index.html".
         $outputDir = $kernel->getOutputDir();
-        $this->assertFileExists($outputDir.'/articles/foo.html');
-        $this->assertFileExists($outputDir.'/articles/bar.html');
-        $this->assertStringContainsString('Article foo', (string) file_get_contents($outputDir.'/articles/foo.html'));
-        $this->assertStringContainsString('Article bar', (string) file_get_contents($outputDir.'/articles/bar.html'));
+        $this->assertFileExists($outputDir.'/articles/foo/index.html');
+        $this->assertFileExists($outputDir.'/articles/bar/index.html');
+        $this->assertStringContainsString('Article foo', (string) file_get_contents($outputDir.'/articles/foo/index.html'));
+        $this->assertStringContainsString('Article bar', (string) file_get_contents($outputDir.'/articles/bar/index.html'));
     }
 }

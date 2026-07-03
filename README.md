@@ -41,6 +41,10 @@ bakslash_static_site:
 
     # Minify generated HTML and XML pages (requires sensiolabs/minify-bundle).
     minify: false
+
+    # Write HTML pages as "<path>/index.html" instead of "<path>.html", so the site serves
+    # clean URLs with no server rewrite rules (see "Serving the generated site").
+    clean_urls: false
 ```
 
 ## Usage
@@ -108,7 +112,7 @@ You can also pass an inline list of parameter sets:
 bin/console static-site:generate
 ```
 
-The command **only writes pages — it never deletes anything.** When you remove or rename a
+The command **only writes pages, and never deletes anything.** When you remove or rename a
 route, its previously generated file stays in `storage`; you are responsible for removing
 stale files yourself. The natural place to do that (it also gives you atomic publishing) is
 your deploy step, which is built for it:
@@ -123,11 +127,14 @@ web server directly at `storage` during a build.
 
 ## Serving the generated site
 
-Pages are written as `<path>.html`, and `/` as `index.html` — for example the route
+Pages are written as `<path>.html`, and `/` as `index.html`. For example the route
 `/articles/{slug}` becomes `articles/<slug>.html`. Point your server's document root at the
 generated directory and have it serve `foo.html` when `/foo` is requested. For a custom
 error page, add a prerendered `/404` route; it is written as `404.html`, which the examples
 below reference.
+
+If you set `clean_urls: true`, pages are written as `<path>/index.html` instead, and every
+server serves clean URLs out of the box, so the rewrite rules below become unnecessary.
 
 ### Caddy
 
@@ -178,12 +185,12 @@ RewriteRule ^ %{REQUEST_URI}.html [L]
 ### GitHub Pages
 
 GitHub Pages already serves `foo.html` at `/foo`, `index.html` for directories, and
-`404.html` for missing pages — no rewrite rules are needed. Add an empty `.nojekyll` file to
+`404.html` for missing pages, so no rewrite rules are needed. Add an empty `.nojekyll` file to
 the output so the files are served verbatim, then publish the generated directory (build
 steps depend on your app):
 
 ```yaml
-# .github/workflows/deploy.yml — inside a job with pages: write + id-token: write
+# .github/workflows/deploy.yml (inside a job with pages: write + id-token: write)
 - run: bin/console static-site:generate
 - run: touch build/.nojekyll
 - uses: actions/upload-pages-artifact@v3
@@ -195,7 +202,7 @@ steps depend on your app):
 ### Cloudflare Pages
 
 Cloudflare Pages also serves `foo.html` at `/foo`, `index.html` for directories, and
-`404.html` automatically — no rewrite rules are needed. Deploy the generated directory
+`404.html` automatically, so no rewrite rules are needed. Deploy the generated directory
 directly, or point a Git integration's output directory at it:
 
 ```bash
