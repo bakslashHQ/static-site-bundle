@@ -40,11 +40,11 @@ final class BundleIntegrationTest extends KernelTestCase
         $this->assertSame('static-site:generate', $command->getName());
     }
 
-    public function testRendererIsNotDecoratedWhenMinifyDisabled(): void
+    public function testMinifyListenerIsNotRegisteredWhenMinifyDisabled(): void
     {
         self::bootKernel();
 
-        // Minification defaults to false, so MinifierPass must not register the decorator.
-        $this->assertFalse(self::getContainer()->has('.bakslash_static_site.renderer.minifying'));
+        // Minification defaults to false, so MinifierPass must not register the listener.
+        $this->assertFalse(self::getContainer()->has('.bakslash_static_site.minify_listener'));
     }
 }

@@ -241,9 +241,9 @@ services:
 ```
 
 Overridable ids: `bakslash_static_site.renderer`, `bakslash_static_site.dumper`,
-`bakslash_static_site.filesystem`, `bakslash_static_site.uri_provider`. When minification
-is enabled it still decorates whatever `bakslash_static_site.renderer` resolves to,
-including your custom one.
+`bakslash_static_site.filesystem`, `bakslash_static_site.uri_provider`. Minification runs as
+a `PageRenderedEvent` listener (see [Events](#events)), so it applies to whatever the
+renderer produces, including a custom one.
 
 ### Storage backend
 

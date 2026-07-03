@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace Bakslash\StaticSiteBundle\DependencyInjection\Compiler;
 
+use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
+use Bakslash\StaticSiteBundle\EventListener\MinifyListener;
 use Bakslash\StaticSiteBundle\Exception\LogicException;
-use Bakslash\StaticSiteBundle\Renderer\MinifyingRenderer;
 use Sensiolabs\MinifyBundle\Minifier\MinifierInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
- * Registers the minifying renderer decorator when minification is enabled.
+ * Registers the minifying listener when minification is enabled.
  *
  * @internal
  */
@@ -28,11 +29,14 @@ final class MinifierPass implements CompilerPassInterface
             throw new LogicException('Package "sensiolabs/minify-bundle" is required to use the "minify" option. Try running "composer require sensiolabs/minify-bundle".');
         }
 
-        $container->register('.bakslash_static_site.renderer.minifying', MinifyingRenderer::class)
-            ->setDecoratedService('bakslash_static_site.renderer')
-            ->setArguments([
-                new Reference('.inner'),
-                new Reference(MinifierInterface::class),
+        // Runs late (negative priority) so it minifies the final content, after any
+        // user PageRenderedEvent listeners have transformed the page.
+        $container->register('.bakslash_static_site.minify_listener', MinifyListener::class)
+            ->setArguments([new Reference(MinifierInterface::class)])
+            ->addTag('kernel.event_listener', [
+                'event' => PageRenderedEvent::class,
+                'method' => '__invoke',
+                'priority' => -256,
             ]);
     }
 }
