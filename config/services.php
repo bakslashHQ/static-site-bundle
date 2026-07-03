@@ -49,6 +49,7 @@ return static function (ContainerConfigurator $container): void {
             service('bakslash_static_site.uri_provider'),
             service('bakslash_static_site.renderer'),
             service('bakslash_static_site.dumper'),
+            service('event_dispatcher'),
         ]);
 
     $services->set('.bakslash_static_site.command.generate', GenerateStaticSiteCommand::class)

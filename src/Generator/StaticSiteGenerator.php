@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\Generator;
 
 use Bakslash\StaticSiteBundle\Dumper\DumperInterface;
+use Bakslash\StaticSiteBundle\Event\PageDumpedEvent;
+use Bakslash\StaticSiteBundle\Event\PageFailedEvent;
+use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
 use Bakslash\StaticSiteBundle\Exception\DumpingException;
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Renderer\RendererInterface;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
  * @internal
@@ -20,6 +24,7 @@ final readonly class StaticSiteGenerator
         private UriProviderInterface $uriProvider,
         private RendererInterface $renderer,
         private DumperInterface $dumper,
+        private EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
@@ -30,17 +35,25 @@ final readonly class StaticSiteGenerator
     {
         foreach ($this->uriProvider->provide() as $item) {
             if ($item instanceof UriGenerationFailure) {
+                $this->eventDispatcher->dispatch(new PageFailedEvent($item->identifier, $item->error));
+
                 yield GenerationResult::failure($item->identifier, $item->error);
 
                 continue;
             }
 
             try {
-                $page = $this->renderer->render($item);
+                $event = new PageRenderedEvent($item, $this->renderer->render($item));
+                $this->eventDispatcher->dispatch($event);
+
+                $page = $event->getPage();
                 $this->dumper->dump($item, $page->content, $page->format);
+                $this->eventDispatcher->dispatch(new PageDumpedEvent($item));
 
                 yield GenerationResult::success($item);
             } catch (RenderingException|DumpingException $exception) {
+                $this->eventDispatcher->dispatch(new PageFailedEvent($item, $exception));
+
                 yield GenerationResult::failure($item, $exception);
             }
         }

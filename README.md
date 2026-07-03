@@ -268,6 +268,38 @@ Set `minify: true` to minify generated HTML and XML pages. This requires
 [`sensiolabs/minify-bundle`](https://github.com/sensiolabs/minify-bundle) to be
 installed and enabled; if it isn't, the container build fails with a clear error.
 
+## Events
+
+The generator dispatches events during a run, so you can hook in with a normal listener or
+subscriber:
+
+| Event | When | Typical use |
+| --- | --- | --- |
+| `Event\PageRenderedEvent` | after a page renders, before it is written | transform the page (`$event->setPage(...)`) |
+| `Event\PageDumpedEvent` | after a page is written | collect the generated URIs (e.g. a sitemap) |
+| `Event\PageFailedEvent` | a page could not be generated | react to failures (log, notify); covers URI, render and write failures |
+
+For example, to rewrite links in every generated page:
+
+```php
+use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
+use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+
+#[AsEventListener]
+final class RewriteLinks
+{
+    public function __invoke(PageRenderedEvent $event): void
+    {
+        $page = $event->getPage();
+        $event->setPage(new RenderedPage(
+            str_replace('https://staging.example.com', 'https://example.com', $page->content),
+            $page->format,
+        ));
+    }
+}
+```
+
 ## License
 
 Released under the [MIT License](LICENSE).

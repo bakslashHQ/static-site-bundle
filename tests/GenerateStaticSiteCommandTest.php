@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 final class GenerateStaticSiteCommandTest extends TestCase
 {
@@ -23,7 +24,7 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $renderer = $this->createStub(RendererInterface::class);
         $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
 
-        $generator = new StaticSiteGenerator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class));
+        $generator = new StaticSiteGenerator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
 
         $this->assertSame(0, (new GenerateStaticSiteCommand($generator))->__invoke($this->io()));
     }
@@ -33,7 +34,7 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $renderer = $this->createStub(RendererInterface::class);
         $renderer->method('render')->willThrowException(new RenderingException('boom'));
 
-        $generator = new StaticSiteGenerator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class));
+        $generator = new StaticSiteGenerator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
 
         $this->assertSame(1, (new GenerateStaticSiteCommand($generator))->__invoke($this->io()));
     }
