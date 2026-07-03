@@ -9,6 +9,7 @@ use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use Bakslash\StaticSiteBundle\Renderer\RendererInterface;
+use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -53,6 +54,26 @@ final class StaticSiteGeneratorTest extends TestCase
         $this->assertFalse($results[0]->successful);
         $this->assertInstanceOf(RenderingException::class, $results[0]->error);
         $this->assertTrue($results[1]->successful);
+    }
+
+    public function testUriGenerationFailureBecomesAFailureResult(): void
+    {
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
+
+        $failure = new UriGenerationFailure('route "article"', new \RuntimeException('bad slug'));
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturn(['/a', $failure, '/b']);
+
+        $generator = new StaticSiteGenerator($provider, $renderer, $this->createStub(DumperInterface::class));
+
+        $results = iterator_to_array($generator->generate());
+
+        $this->assertTrue($results[0]->successful);
+        $this->assertFalse($results[1]->successful);
+        $this->assertSame('route "article"', $results[1]->uri);
+        $this->assertSame($failure->error, $results[1]->error);
+        $this->assertTrue($results[2]->successful);
     }
 
     /**

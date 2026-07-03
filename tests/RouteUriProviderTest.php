@@ -7,6 +7,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use Bakslash\StaticSiteBundle\UriProvider\RouteUriProvider;
+use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -181,6 +182,31 @@ final class RouteUriProviderTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageIs(\sprintf('The "invalidService" params provider service does not implement "%s".', ParamsProviderInterface::class));
         iterator_to_array($provider->provide());
+    }
+
+    public function testYieldsAFailureForAnInvalidParameterSetWithoutAborting(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('article', new Route('/article/{slug}', [
+            '_static_generation' => [
+                'params' => [[
+                    'slug' => 'ok',
+                ], [
+                    'wrong' => 'x',
+                ]],
+            ],
+        ]));
+
+        $provider = new RouteUriProvider(
+            $this->createRouter($routes),
+            $this->createStub(ServiceLocator::class),
+        );
+
+        $results = iterator_to_array($provider->provide());
+
+        $this->assertSame('/article/ok', $results[0]);
+        $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
+        $this->assertStringContainsString('route "article"', $results[1]->identifier);
     }
 
     private function createRouter(RouteCollection $routes): Router

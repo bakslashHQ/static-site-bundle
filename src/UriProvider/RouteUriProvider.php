@@ -8,6 +8,7 @@ use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use Bakslash\StaticSiteBundle\Routing\PrerenderRouteLoader;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\Routing\Exception\InvalidParameterException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\RouterInterface;
 
@@ -37,7 +38,16 @@ final readonly class RouteUriProvider implements UriProviderInterface
             }
 
             foreach ($this->getParamsList($params) as $paramSet) {
-                yield $this->stripBaseUrl($this->generate($routeName, $paramSet), $baseUrl);
+                try {
+                    $uri = $this->router->generate($routeName, $paramSet, RouterInterface::ABSOLUTE_PATH);
+                } catch (MissingMandatoryParametersException|InvalidParameterException $exception) {
+                    // A single bad parameter set (e.g. a null slug) fails only its own page.
+                    yield new UriGenerationFailure(\sprintf('route "%s" (%s)', $routeName, json_encode($paramSet) ?: '{}'), $exception);
+
+                    continue;
+                }
+
+                yield $this->stripBaseUrl($uri, $baseUrl);
             }
         }
     }
