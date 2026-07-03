@@ -33,6 +33,8 @@ final readonly class StaticSiteGenerator
      */
     public function generate(): iterable
     {
+        $seen = [];
+
         foreach ($this->uriProvider->provide() as $item) {
             if ($item instanceof UriGenerationFailure) {
                 $this->eventDispatcher->dispatch(new PageFailedEvent($item->identifier, $item->error));
@@ -41,6 +43,13 @@ final readonly class StaticSiteGenerator
 
                 continue;
             }
+
+            // The same URI can be produced twice (duplicate parameter sets, or a static and a
+            // generated route colliding); generate it only once, first occurrence wins.
+            if (isset($seen[$item])) {
+                continue;
+            }
+            $seen[$item] = true;
 
             try {
                 $event = new PageRenderedEvent($item, $this->renderer->render($item));

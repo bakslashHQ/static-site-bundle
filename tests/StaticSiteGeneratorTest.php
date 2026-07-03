@@ -36,6 +36,20 @@ final class StaticSiteGeneratorTest extends TestCase
         $this->assertTrue($results[1]->successful);
     }
 
+    public function testGeneratesEachUriOnlyOnce(): void
+    {
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
+
+        $dumper = $this->createMock(DumperInterface::class);
+        $dumper->expects($this->once())->method('dump');
+
+        $results = iterator_to_array($this->generator($this->uriProvider(['/a', '/a']), $renderer, $dumper)->generate());
+
+        $this->assertCount(1, $results);
+        $this->assertSame('/a', $results[0]->uri);
+    }
+
     public function testRenderFailureYieldsFailureResultAndKeepsGoing(): void
     {
         $renderer = $this->createStub(RendererInterface::class);
