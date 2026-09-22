@@ -16,14 +16,6 @@ final class ServiceOverrideTest extends KernelTestCase
         return CustomServicesKernel::class;
     }
 
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        // FrameworkBundle::boot() registers an ErrorHandler it never restores.
-        restore_exception_handler();
-    }
-
     public function testRendererAndDumperCanBeOverridden(): void
     {
         self::bootKernel();

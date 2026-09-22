@@ -25,9 +25,6 @@ final class BasePathGenerationTest extends KernelTestCase
         }
 
         parent::tearDown();
-
-        // FrameworkBundle::boot() registers an ErrorHandler it never restores.
-        restore_exception_handler();
     }
 
     public function testGeneratesEveryPageUnderABaseUriPath(): void

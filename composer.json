@@ -23,7 +23,8 @@
         "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^12.0 || ^13.0",
         "sensiolabs/minify-bundle": "^1.3",
-        "symfony/filesystem": "^7.4 || ^8.0"
+        "symfony/filesystem": "^7.4 || ^8.0",
+        "symfony/runtime": "^7.4 || ^8.0"
     },
     "conflict": {
         "sensiolabs/minify-bundle": "<1.3"
@@ -43,7 +44,10 @@
         }
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "symfony/runtime": true
+        }
     },
     "scripts": {
         "test": "phpunit",

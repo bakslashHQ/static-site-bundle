@@ -24,9 +24,6 @@ final class GenerateStaticSiteTest extends KernelTestCase
         }
 
         parent::tearDown();
-
-        // FrameworkBundle::boot() registers an ErrorHandler it never restores.
-        restore_exception_handler();
     }
 
     public function testGeneratesMinifiedPageEndToEnd(): void

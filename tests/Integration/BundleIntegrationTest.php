@@ -17,15 +17,6 @@ final class BundleIntegrationTest extends KernelTestCase
         return TestKernel::class;
     }
 
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        // FrameworkBundle::boot() registers an ErrorHandler as the exception handler
-        // but does not restore it on shutdown; clean it up so the test is not flagged risky.
-        restore_exception_handler();
-    }
-
     public function testGenerateCommandIsWired(): void
     {
         $kernel = self::bootKernel();

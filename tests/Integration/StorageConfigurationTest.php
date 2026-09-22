@@ -14,14 +14,6 @@ final class StorageConfigurationTest extends KernelTestCase
         return StorageServiceKernel::class;
     }
 
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        // FrameworkBundle::boot() registers an ErrorHandler it never restores.
-        restore_exception_handler();
-    }
-
     public function testServiceReferenceStorageAliasesTheConfiguredFilesystem(): void
     {
         self::bootKernel();
