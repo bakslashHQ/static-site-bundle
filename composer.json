@@ -22,8 +22,11 @@
         "friendsofphp/php-cs-fixer": "^3.0",
         "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^12.0 || ^13.0",
-        "sensiolabs/minify-bundle": "dev-feat/html-support as 1.3.0",
+        "sensiolabs/minify-bundle": "^1.3",
         "symfony/filesystem": "^7.4 || ^8.0"
+    },
+    "conflict": {
+        "sensiolabs/minify-bundle": "<1.3"
     },
     "suggest": {
         "league/flysystem-bundle": "Configure a non-local storage backend (S3, FTP, ...) and reference it from the \"storage\" option",
@@ -54,12 +57,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/bakslashHQ/minify-bundle",
-            "no-api": true
-        }
-    ]
+    "prefer-stable": true
 }
