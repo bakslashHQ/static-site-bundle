@@ -16,6 +16,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Contracts\Service\ResetInterface;
 
 final class GenerateStaticSiteCommandTest extends TestCase
 {
@@ -24,7 +25,7 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $renderer = $this->createStub(RendererInterface::class);
         $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
 
-        $generator = new StaticSiteGenerator($this->uriProvider(['/a', '/b']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
+        $generator = new StaticSiteGenerator($this->uriProvider(['/a', '/b']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
 
         [$exit, $display] = $this->invoke($generator);
 
@@ -43,7 +44,7 @@ final class GenerateStaticSiteCommandTest extends TestCase
             return new RenderedPage('content', 'html');
         });
 
-        $generator = new StaticSiteGenerator($this->uriProvider(['/ok', '/bad']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher());
+        $generator = new StaticSiteGenerator($this->uriProvider(['/ok', '/bad']), $renderer, $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
 
         [$exit, $display] = $this->invoke($generator);
 

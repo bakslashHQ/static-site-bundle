@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Routing\RequestContext;
-use Symfony\Contracts\Service\ResetInterface;
 
 final class PageRendererTest extends TestCase
 {
@@ -137,37 +136,8 @@ final class PageRendererTest extends TestCase
         $this->renderer($kernel)->render('/foo');
     }
 
-    public function testResetsServicesAfterSuccess(): void
+    private function renderer(HttpKernelInterface $kernel): PageRenderer
     {
-        $kernel = $this->createStub(HttpKernelInterface::class);
-        $kernel->method('handle')->willReturn(new Response('ok'));
-
-        $resetter = $this->createMock(ResetInterface::class);
-        $resetter->expects($this->once())->method('reset');
-
-        $this->renderer($kernel, $resetter)->render('/foo');
-    }
-
-    public function testResetsServicesAfterFailure(): void
-    {
-        $kernel = $this->createStub(HttpKernelInterface::class);
-        $kernel->method('handle')->willReturn(new Response('boom', Response::HTTP_INTERNAL_SERVER_ERROR));
-
-        $resetter = $this->createMock(ResetInterface::class);
-        $resetter->expects($this->once())->method('reset');
-
-        try {
-            $this->renderer($kernel, $resetter)->render('/whatever');
-        } catch (RenderingException) {
-        }
-    }
-
-    private function renderer(HttpKernelInterface $kernel, ?ResetInterface $servicesResetter = null): PageRenderer
-    {
-        return new PageRenderer(
-            $kernel,
-            $servicesResetter ?? $this->createStub(ResetInterface::class),
-            new SiteContext(new RequestContext(), 'http://localhost'),
-        );
+        return new PageRenderer($kernel, new SiteContext(new RequestContext(), 'http://localhost'));
     }
 }

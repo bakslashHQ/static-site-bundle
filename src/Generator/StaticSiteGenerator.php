@@ -15,6 +15,7 @@ use Bakslash\StaticSiteBundle\UriProvider\GenerationFilter;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * @internal
@@ -26,6 +27,7 @@ final readonly class StaticSiteGenerator
         private RendererInterface $renderer,
         private DumperInterface $dumper,
         private EventDispatcherInterface $eventDispatcher,
+        private ResetInterface $servicesResetter,
     ) {
     }
 
@@ -60,12 +62,16 @@ final readonly class StaticSiteGenerator
                 $this->dumper->dump($item, $page->content, $page->format);
                 $this->eventDispatcher->dispatch(new PageDumpedEvent($item));
 
-                yield GenerationResult::success($item);
+                $result = GenerationResult::success($item);
             } catch (RenderingException|DumpingException $exception) {
                 $this->eventDispatcher->dispatch(new PageFailedEvent($item, $exception));
 
-                yield GenerationResult::failure($item, $exception);
+                $result = GenerationResult::failure($item, $exception);
+            } finally {
+                $this->servicesResetter->reset();
             }
+
+            yield $result;
         }
     }
 }

@@ -17,6 +17,7 @@ use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Contracts\Service\ResetInterface;
 
 final class StaticSiteGeneratorTest extends TestCase
 {
@@ -146,13 +147,42 @@ final class StaticSiteGeneratorTest extends TestCase
         $this->assertSame(['/broken', 'route "x"'], $failed);
     }
 
+    public function testResetsServicesAfterEachPage(): void
+    {
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
+
+        $servicesResetter = $this->createMock(ResetInterface::class);
+        $servicesResetter->expects($this->exactly(2))->method('reset');
+
+        iterator_to_array($this->generator($this->uriProvider(['/a', '/b']), $renderer, $this->createStub(DumperInterface::class), servicesResetter: $servicesResetter)->generate());
+    }
+
+    public function testResetsServicesAfterAFailedPage(): void
+    {
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willThrowException(new RenderingException('boom'));
+
+        $servicesResetter = $this->createMock(ResetInterface::class);
+        $servicesResetter->expects($this->once())->method('reset');
+
+        iterator_to_array($this->generator($this->uriProvider(['/broken']), $renderer, $this->createStub(DumperInterface::class), servicesResetter: $servicesResetter)->generate());
+    }
+
     private function generator(
         UriProviderInterface $uriProvider,
         RendererInterface $renderer,
         DumperInterface $dumper,
         ?EventDispatcherInterface $dispatcher = null,
+        ?ResetInterface $servicesResetter = null,
     ): StaticSiteGenerator {
-        return new StaticSiteGenerator($uriProvider, $renderer, $dumper, $dispatcher ?? new EventDispatcher());
+        return new StaticSiteGenerator(
+            $uriProvider,
+            $renderer,
+            $dumper,
+            $dispatcher ?? new EventDispatcher(),
+            $servicesResetter ?? $this->createStub(ResetInterface::class),
+        );
     }
 
     /**

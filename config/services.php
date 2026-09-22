@@ -42,7 +42,6 @@ return static function (ContainerConfigurator $container): void {
     $services->set('bakslash_static_site.renderer', PageRenderer::class)
         ->args([
             service('http_kernel'),
-            service('services_resetter'),
             service('.bakslash_static_site.site_context'),
         ]);
 
@@ -58,6 +57,7 @@ return static function (ContainerConfigurator $container): void {
             service('bakslash_static_site.renderer'),
             service('bakslash_static_site.dumper'),
             service('event_dispatcher'),
+            service('services_resetter'),
         ]);
 
     $services->set('.bakslash_static_site.command.generate', GenerateStaticSiteCommand::class)
