@@ -183,7 +183,29 @@ final class RouteUriProviderTest extends TestCase
 
         $this->assertSame('/article/ok', $results[0]);
         $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
-        $this->assertStringContainsString('route "article"', $results[1]->identifier);
+        $this->assertStringContainsString('Route "article"', $results[1]->identifier);
+    }
+
+    public function testYieldsAFailureWhenParametersEndUpInTheQueryString(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('article', new Route('/article/{slug}', [
+            '_static_generation' => [
+                'params' => [[
+                    'slug' => 'ok',
+                ], [
+                    'slug' => 'extra',
+                    'page' => 2,
+                ]],
+            ],
+        ]));
+
+        $results = iterator_to_array($this->createProvider($routes)->provide());
+
+        $this->assertSame('/article/ok', $results[0]);
+        $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
+        $this->assertSame('Route "article" ({"slug":"extra","page":2})', $results[1]->identifier);
+        $this->assertSame('Expected route "article" to generate a path without a query string or fragment, got "/article/extra?page=2".', $results[1]->error->getMessage());
     }
 
     public function testFiltersByRouteName(): void

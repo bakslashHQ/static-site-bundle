@@ -50,7 +50,17 @@ final readonly class RouteUriProvider implements UriProviderInterface
                         $uri = $this->router->generate($routeName, $paramSet, RouterInterface::ABSOLUTE_PATH);
                     } catch (MissingMandatoryParametersException|InvalidParameterException $exception) {
                         // A single bad parameter set (e.g. a null slug) fails only its own page.
-                        yield new UriGenerationFailure(\sprintf('route "%s" (%s)', $routeName, json_encode($paramSet) ?: '{}'), $exception);
+                        yield new UriGenerationFailure($this->pageIdentifier($routeName, $paramSet), $exception);
+
+                        continue;
+                    }
+
+                    // Parameters the route has no placeholder for land in the query string.
+                    if (false !== strpbrk($uri, '?#')) {
+                        yield new UriGenerationFailure(
+                            $this->pageIdentifier($routeName, $paramSet),
+                            new InvalidConfigurationException(\sprintf('Expected route "%s" to generate a path without a query string or fragment, got "%s".', $routeName, $uri)),
+                        );
 
                         continue;
                     }
@@ -124,6 +134,14 @@ final readonly class RouteUriProvider implements UriProviderInterface
         } catch (MissingMandatoryParametersException $exception) {
             throw new InvalidConfigurationException(\sprintf('Route "%s" has required parameters; configure a "params" provider on its #[Prerender] attribute.', $routeName), previous: $exception);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $paramSet
+     */
+    private function pageIdentifier(string $routeName, array $paramSet): string
+    {
+        return \sprintf('Route "%s" (%s)', $routeName, json_encode($paramSet) ?: '{}');
     }
 
     private function stripBasePath(string $uri): string
