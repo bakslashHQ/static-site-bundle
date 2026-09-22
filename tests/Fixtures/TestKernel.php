@@ -7,6 +7,8 @@ namespace Bakslash\StaticSiteBundle\Tests\Fixtures;
 use Bakslash\StaticSiteBundle\BakslashStaticSiteBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\Config\Resource\DirectoryResource;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
@@ -23,14 +25,16 @@ class TestKernel extends Kernel
 
     public function getProjectDir(): string
     {
-        // Keep all generated artifacts (cache, logs, config/reference.php) out of the bundle.
-        return sys_get_temp_dir().'/bakslash_static_site_bundle';
+        return sys_get_temp_dir().'/bakslash_static_site_bundle/'.substr(md5(__DIR__), 0, 8);
+    }
+
+    protected function build(ContainerBuilder $container): void
+    {
+        $container->addResource(new DirectoryResource(\dirname(__DIR__, 2).'/src', '/\.php$/'));
     }
 
     public function getCacheDir(): string
     {
-        // Isolate each fixture kernel's cache (notably the compiled route generator/matcher,
-        // which is named generically) so one kernel's routes cannot leak into another.
         return $this->getProjectDir().'/var/cache/'.$this->environment.'/'.(new \ReflectionClass($this))->getShortName();
     }
 
