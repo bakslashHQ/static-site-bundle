@@ -43,23 +43,25 @@ final readonly class GenerateStaticSiteCommand
         $progress?->setFormat(' <info>%current%</info> pages generated (%elapsed%)');
         $progress?->start();
 
-        foreach ($this->generator->generate(new GenerationFilter($route, $path)) as $result) {
-            if ($result->successful) {
-                ++$generated;
-                $io->writeln(\sprintf(' <info>✓</info> %s', $result->uri), OutputInterface::VERBOSITY_VERBOSE);
-            } else {
-                ++$failed;
-                $progress?->clear();
-                $io->writeln(\sprintf(' <error>✗</error> %s: %s', $result->uri, $result->error?->getMessage()));
-                $progress?->display();
+        try {
+            foreach ($this->generator->generate(new GenerationFilter($route, $path)) as $result) {
+                if ($result->successful) {
+                    ++$generated;
+                    $io->writeln(\sprintf(' <info>✓</info> %s', $result->uri), OutputInterface::VERBOSITY_VERBOSE);
+                } else {
+                    ++$failed;
+                    $progress?->clear();
+                    $io->writeln(\sprintf(' <error>✗</error> %s: %s', $result->uri, $result->error?->getMessage()));
+                    $progress?->display();
+                }
+
+                $progress?->advance();
             }
-
-            $progress?->advance();
-        }
-
-        $progress?->finish();
-        if (null !== $progress) {
-            $io->newLine(2);
+        } finally {
+            if (null !== $progress) {
+                $progress->finish();
+                $io->newLine(2);
+            }
         }
 
         if ($failed > 0) {

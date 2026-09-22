@@ -6,6 +6,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Command\GenerateStaticSiteCommand;
 use Bakslash\StaticSiteBundle\Dumper\DumperInterface;
+use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
@@ -61,6 +62,33 @@ final class GenerateStaticSiteCommandTest extends TestCase
 
         $this->assertSame(0, $exit);
         $this->assertStringContainsString('No page to generate', $display);
+    }
+
+    public function testFinishesTheProgressBarWhenTheRunAborts(): void
+    {
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturnCallback(static function (): \Generator {
+            yield '/a';
+            yield '/b';
+
+            throw new InvalidConfigurationException('boom');
+        });
+
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
+
+        $generator = new StaticSiteGenerator($provider, $renderer, $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
+
+        $output = new BufferedOutput(decorated: true);
+
+        try {
+            (new GenerateStaticSiteCommand($generator))->__invoke(new SymfonyStyle(new ArrayInput([]), $output));
+            $this->fail('Expected the configuration error to propagate.');
+        } catch (InvalidConfigurationException) {
+        }
+
+        // Finished on the way out, so the counter is not left stale at its starting value.
+        $this->assertStringContainsString('2 pages generated', (string) preg_replace('/\e\[[\d;]*m/', '', $output->fetch()));
     }
 
     /**
