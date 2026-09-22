@@ -68,7 +68,7 @@ final readonly class PageRenderer implements RendererInterface
 
     private function redirectStub(string $location): string
     {
-        $target = htmlspecialchars($location, \ENT_QUOTES);
+        $target = htmlspecialchars($location, \ENT_QUOTES | \ENT_SUBSTITUTE);
 
         return \sprintf(
             '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=%s"><link rel="canonical" href="%s"><title>Redirecting</title></head><body>Redirecting to <a href="%s">%s</a>.</body></html>',

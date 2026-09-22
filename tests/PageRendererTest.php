@@ -81,6 +81,19 @@ final class PageRendererTest extends TestCase
         $this->assertStringContainsString('0; url=/new', $page->content);
     }
 
+    public function testKeepsARedirectTargetThatIsNotValidUtf8(): void
+    {
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('', Response::HTTP_FOUND, [
+            'Location' => "/caf\xE9/page",
+        ]));
+
+        $page = $this->renderer($kernel)->render('/old');
+
+        $this->assertStringNotContainsString('content="0; url="', $page->content);
+        $this->assertStringContainsString('/caf', $page->content);
+    }
+
     public function testThrowOnRedirectWithoutALocation(): void
     {
         $kernel = $this->createStub(HttpKernelInterface::class);
