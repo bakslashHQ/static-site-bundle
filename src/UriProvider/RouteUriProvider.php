@@ -173,7 +173,8 @@ final readonly class RouteUriProvider implements UriProviderInterface
                 throw new InvalidConfigurationException(\sprintf('The "%s" params provider service does not implement "%s".', $serviceId, ParamsProviderInterface::class));
             }
 
-            return $paramsProvider->provideParameterSets();
+            // Drained up front: a suspended provider would be caught by the reset between pages.
+            return iterator_to_array($paramsProvider->provideParameterSets(), false);
         }
 
         return $params;

@@ -239,6 +239,37 @@ final class RouteUriProviderTest extends TestCase
         $this->assertSame(['/shop'], iterator_to_array($provider->provide(new GenerationFilter(paths: ['/shop*']))));
     }
 
+    public function testDrainsAParamsProviderBeforeYieldingAnyOfItsUris(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('article', new Route('/article/{slug}', [
+            '_static_generation' => ['params' => 'slugs'],
+        ]));
+
+        $produced = 0;
+        $paramsProvider = $this->createStub(ParamsProviderInterface::class);
+        $paramsProvider->method('provideParameterSets')->willReturnCallback(static function () use (&$produced): \Generator {
+            foreach (['a', 'b', 'c'] as $slug) {
+                ++$produced;
+
+                yield ['slug' => $slug];
+            }
+        });
+
+        $paramsProviders = $this->createStub(ServiceLocator::class);
+        $paramsProviders->method('has')->willReturnMap([['slugs', true]]);
+        $paramsProviders->method('get')->willReturnMap([['slugs', $paramsProvider]]);
+
+        foreach ($this->createProvider($routes, $paramsProviders)->provide() as $uri) {
+            $this->assertSame('/article/a', $uri);
+
+            break;
+        }
+
+        // A suspended provider would be caught by the reset that runs between pages.
+        $this->assertSame(3, $produced);
+    }
+
     public function testPutsTheRequestContextBackWhenValidationAborts(): void
     {
         $routes = new RouteCollection();

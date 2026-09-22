@@ -153,6 +153,10 @@ stays flat no matter how many pages you generate. Run generation with `APP_ENV=p
 least overhead, and make sure any stateful service of your own implements
 `Symfony\Contracts\Service\ResetInterface` so it is reset between pages too.
 
+A route's parameter sets are collected before any of its pages are rendered, so
+`provideParameterSets()` runs uninterrupted by those resets; only one route's sets are held at
+a time.
+
 ## Serving the generated site
 
 Pages are written as `<path>.html`, and a path ending in a slash as `<path>index.html`, so
