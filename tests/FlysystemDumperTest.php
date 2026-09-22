@@ -38,6 +38,14 @@ final class FlysystemDumperTest extends TestCase
         (new FlysystemDumper($filesystem))->dump('/', '<feed/>', 'xml');
     }
 
+    public function testWritesATrailingSlashAsADirectoryIndex(): void
+    {
+        $filesystem = $this->createMock(FilesystemOperator::class);
+        $filesystem->expects($this->once())->method('write')->with('blog/index.html', 'content');
+
+        (new FlysystemDumper($filesystem))->dump('/blog/', 'content', 'html');
+    }
+
     public function testAppendsTheFormatExtension(): void
     {
         $filesystem = $this->createMock(FilesystemOperator::class);

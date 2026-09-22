@@ -155,12 +155,12 @@ least overhead, and make sure any stateful service of your own implements
 
 ## Serving the generated site
 
-Pages are written as `<path>.html`, and `/` as `index.html`. For example the route
-`/articles/{slug}` becomes `articles/<slug>.html`. Point your server's document root at the
-generated directory and have it serve `foo.html` when `/foo` is requested. For a custom
-error page, add a prerendered `/404` route that returns a 200 response with your error markup;
-it is written as `404.html`, which the examples below reference (the server sets the actual
-404 status).
+Pages are written as `<path>.html`, and a path ending in a slash as `<path>index.html`, so
+`/` becomes `index.html`. For example the route `/articles/{slug}` becomes
+`articles/<slug>.html`. Point your server's document root at the generated directory and have
+it serve `foo.html` when `/foo` is requested. For a custom error page, add a prerendered
+`/404` route that returns a 200 response with your error markup; it is written as `404.html`,
+which the examples below reference (the server sets the actual 404 status).
 
 A route that returns a redirect (3xx) is written as a static meta-refresh stub pointing at its
 `Location`, so public canonical redirects work on any host. Because of this, don't prerender

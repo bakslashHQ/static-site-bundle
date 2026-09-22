@@ -24,7 +24,7 @@ final readonly class FlysystemDumper implements DumperInterface
         $format ??= 'html';
 
         $path = ltrim(match (true) {
-            '/' === $uri => 'index.'.$format,
+            str_ends_with($uri, '/') => $uri.'index.'.$format,
             str_ends_with($uri, '.'.$format) => $uri,
             'html' === $format && $this->cleanUrls => trim($uri, '/').'/index.html',
             default => $uri.'.'.$format,
