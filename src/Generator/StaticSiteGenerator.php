@@ -58,8 +58,7 @@ final readonly class StaticSiteGenerator
                 $event = new PageRenderedEvent($item, $this->renderer->render($item));
                 $this->eventDispatcher->dispatch($event);
 
-                $page = $event->getPage();
-                $this->dumper->dump($item, $page->content, $page->format);
+                $this->dumper->dump($item, $event->getPage());
                 $this->eventDispatcher->dispatch(new PageDumpedEvent($item));
 
                 $result = GenerationResult::success($item);

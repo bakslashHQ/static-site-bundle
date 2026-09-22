@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\Dumper;
 
 use Bakslash\StaticSiteBundle\Exception\DumpingException;
+use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
 
@@ -19,9 +20,9 @@ final readonly class FlysystemDumper implements DumperInterface
     ) {
     }
 
-    public function dump(string $uri, string $content, ?string $format = null): void
+    public function dump(string $uri, RenderedPage $page): void
     {
-        $format ??= 'html';
+        $format = $page->format;
 
         $path = ltrim(match (true) {
             str_ends_with($uri, '/') => $uri.'index.'.$format,
@@ -31,7 +32,7 @@ final readonly class FlysystemDumper implements DumperInterface
         }, '/');
 
         try {
-            $this->filesystem->write($path, $content);
+            $this->filesystem->write($path, $page->content);
         } catch (FilesystemException $exception) {
             throw new DumpingException(\sprintf('Cannot dump page for URI "%s".', $uri), previous: $exception);
         }

@@ -6,6 +6,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Dumper\FlysystemDumper;
 use Bakslash\StaticSiteBundle\Exception\DumpingException;
+use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use League\Flysystem\FilesystemOperator;
 use League\Flysystem\UnableToWriteFile;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +20,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('foo.html', 'content');
 
-        (new FlysystemDumper($filesystem))->dump('/foo', 'content', 'html');
+        (new FlysystemDumper($filesystem))->dump('/foo', new RenderedPage('content', 'html'));
     }
 
     public function testWritesRootAsIndexHtml(): void
@@ -27,7 +28,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('index.html', '<html></html>');
 
-        (new FlysystemDumper($filesystem))->dump('/', '<html></html>');
+        (new FlysystemDumper($filesystem))->dump('/', new RenderedPage('<html></html>', 'html'));
     }
 
     public function testWritesRootWithTheFormatExtension(): void
@@ -35,7 +36,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('index.xml', '<feed/>');
 
-        (new FlysystemDumper($filesystem))->dump('/', '<feed/>', 'xml');
+        (new FlysystemDumper($filesystem))->dump('/', new RenderedPage('<feed/>', 'xml'));
     }
 
     public function testWritesATrailingSlashAsADirectoryIndex(): void
@@ -43,7 +44,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('blog/index.html', 'content');
 
-        (new FlysystemDumper($filesystem))->dump('/blog/', 'content', 'html');
+        (new FlysystemDumper($filesystem))->dump('/blog/', new RenderedPage('content', 'html'));
     }
 
     public function testAppendsTheFormatExtension(): void
@@ -51,7 +52,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('sitemap.xml', '<urlset/>');
 
-        (new FlysystemDumper($filesystem))->dump('/sitemap', '<urlset/>', 'xml');
+        (new FlysystemDumper($filesystem))->dump('/sitemap', new RenderedPage('<urlset/>', 'xml'));
     }
 
     public function testDoesNotAppendTheFormatWhenAlreadyPresent(): void
@@ -59,15 +60,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('feed.xml', '<feed/>');
 
-        (new FlysystemDumper($filesystem))->dump('/feed.xml', '<feed/>', 'xml');
-    }
-
-    public function testDefaultsToHtmlWithoutAFormat(): void
-    {
-        $filesystem = $this->createMock(FilesystemOperator::class);
-        $filesystem->expects($this->once())->method('write')->with('page.html', 'content');
-
-        (new FlysystemDumper($filesystem))->dump('/page', 'content');
+        (new FlysystemDumper($filesystem))->dump('/feed.xml', new RenderedPage('<feed/>', 'xml'));
     }
 
     public function testThrowsDumpingExceptionWhenWriteFails(): void
@@ -79,7 +72,7 @@ final class FlysystemDumperTest extends TestCase
 
         $this->expectException(DumpingException::class);
         $this->expectExceptionMessageToBe('Cannot dump page for URI "/foo".');
-        $dumper->dump('/foo', 'content');
+        $dumper->dump('/foo', new RenderedPage('content', 'html'));
     }
 
     public function testWritesCleanUrlAsADirectoryIndex(): void
@@ -87,7 +80,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('articles/bar/index.html', 'content');
 
-        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/articles/bar', 'content', 'html');
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/articles/bar', new RenderedPage('content', 'html'));
     }
 
     public function testWritesRootAsIndexHtmlWithCleanUrls(): void
@@ -95,7 +88,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('index.html', '<html></html>');
 
-        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/', '<html></html>', 'html');
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/', new RenderedPage('<html></html>', 'html'));
     }
 
     public function testKeepsExplicitHtmlFilesWithCleanUrls(): void
@@ -103,7 +96,7 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('foo.html', 'content');
 
-        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/foo.html', 'content', 'html');
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/foo.html', new RenderedPage('content', 'html'));
     }
 
     public function testKeepsNonHtmlFilesWithCleanUrls(): void
@@ -111,6 +104,6 @@ final class FlysystemDumperTest extends TestCase
         $filesystem = $this->createMock(FilesystemOperator::class);
         $filesystem->expects($this->once())->method('write')->with('feed.xml', '<feed/>');
 
-        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/feed', '<feed/>', 'xml');
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/feed', new RenderedPage('<feed/>', 'xml'));
     }
 }

@@ -96,7 +96,7 @@ final class StaticSiteGeneratorTest extends TestCase
         $renderer->method('render')->willReturn(new RenderedPage('original', 'html'));
 
         $dumper = $this->createMock(DumperInterface::class);
-        $dumper->expects($this->once())->method('dump')->with('/a', 'transformed', 'html');
+        $dumper->expects($this->once())->method('dump')->with('/a', new RenderedPage('transformed', 'html'));
 
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener(PageRenderedEvent::class, static function (PageRenderedEvent $event): void {
