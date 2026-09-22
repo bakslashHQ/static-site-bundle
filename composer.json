@@ -6,8 +6,8 @@
     "keywords": ["symfony", "bundle", "static-site", "ssg", "prerender"],
     "require": {
         "php": ">=8.3",
-        "league/flysystem": "^3.0",
-        "league/flysystem-local": "^3.0",
+        "league/flysystem": "^3.15",
+        "league/flysystem-local": "^3.15",
         "psr/event-dispatcher": "^1.0",
         "symfony/config": "^7.4 || ^8.0",
         "symfony/console": "^7.4 || ^8.0",
