@@ -39,6 +39,17 @@ final class ListStaticSiteCommandTest extends TestCase
         $this->assertStringContainsString('1 could not be built', $display);
     }
 
+    public function testWarnsWhenThereIsNothingToList(): void
+    {
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturn([]);
+
+        [$exit, $display] = $this->invoke($provider);
+
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('No URI to list', $display);
+    }
+
     /**
      * @return array{int, string}
      */

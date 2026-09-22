@@ -53,6 +53,16 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $this->assertStringContainsString('1 failed', $display);
     }
 
+    public function testWarnsWhenNothingWasGenerated(): void
+    {
+        $generator = new StaticSiteGenerator($this->uriProvider([]), $this->createStub(RendererInterface::class), $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
+
+        [$exit, $display] = $this->invoke($generator);
+
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('No page to generate', $display);
+    }
+
     /**
      * @return array{int, string}
      */

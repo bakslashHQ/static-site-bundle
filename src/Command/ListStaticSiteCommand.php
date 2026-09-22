@@ -57,6 +57,12 @@ final readonly class ListStaticSiteCommand
             return Command::FAILURE;
         }
 
+        if ([] === $uris) {
+            $io->warning('No URI to list: check the #[Prerender] attributes and any --route/--path filter.');
+
+            return Command::SUCCESS;
+        }
+
         $io->success(\sprintf('%d URI(s).', \count($uris)));
 
         return Command::SUCCESS;

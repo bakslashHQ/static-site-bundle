@@ -68,6 +68,12 @@ final readonly class GenerateStaticSiteCommand
             return Command::FAILURE;
         }
 
+        if (0 === $generated) {
+            $io->warning('No page to generate: check the #[Prerender] attributes and any --route/--path filter.');
+
+            return Command::SUCCESS;
+        }
+
         $io->success(\sprintf('Generated %d page(s).', $generated));
 
         return Command::SUCCESS;
