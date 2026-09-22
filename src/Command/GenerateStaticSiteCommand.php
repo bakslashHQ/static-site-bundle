@@ -34,8 +34,6 @@ final readonly class GenerateStaticSiteCommand
         #[Option(description: 'Only generate URIs matching this glob (repeatable).')]
         array $path = [],
     ): int {
-        $filter = [] === $route && [] === $path ? null : new GenerationFilter($route, $path);
-
         $generated = 0;
         $failed = 0;
 
@@ -45,7 +43,7 @@ final readonly class GenerateStaticSiteCommand
         $progress?->setFormat(' <info>%current%</info> pages generated (%elapsed%)');
         $progress?->start();
 
-        foreach ($this->generator->generate($filter) as $result) {
+        foreach ($this->generator->generate(new GenerationFilter($route, $path)) as $result) {
             if ($result->successful) {
                 ++$generated;
                 $io->writeln(\sprintf(' <info>✓</info> %s', $result->uri), OutputInterface::VERBOSITY_VERBOSE);

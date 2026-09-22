@@ -34,7 +34,7 @@ final readonly class StaticSiteGenerator
     /**
      * @return iterable<GenerationResult>
      */
-    public function generate(?GenerationFilter $filter = null): iterable
+    public function generate(GenerationFilter $filter = new GenerationFilter()): iterable
     {
         $seen = [];
 

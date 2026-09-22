@@ -28,10 +28,8 @@ final readonly class RouteUriProvider implements UriProviderInterface
     ) {
     }
 
-    public function provide(?GenerationFilter $filter = null): iterable
+    public function provide(GenerationFilter $filter = new GenerationFilter()): iterable
     {
-        $filter ??= new GenerationFilter();
-
         try {
             $this->siteContext->enter();
 

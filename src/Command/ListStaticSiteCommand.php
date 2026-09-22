@@ -34,11 +34,9 @@ final readonly class ListStaticSiteCommand
         #[Option(description: 'Only list URIs matching this glob (repeatable).')]
         array $path = [],
     ): int {
-        $filter = [] === $route && [] === $path ? null : new GenerationFilter($route, $path);
-
         $uris = [];
         $failed = 0;
-        foreach ($this->uriProvider->provide($filter) as $item) {
+        foreach ($this->uriProvider->provide(new GenerationFilter($route, $path)) as $item) {
             if ($item instanceof UriGenerationFailure) {
                 ++$failed;
                 $io->writeln(\sprintf(' <error>✗</error> %s: %s', $item->identifier, $item->error->getMessage()));
