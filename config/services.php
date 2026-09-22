@@ -63,6 +63,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set('.bakslash_static_site.command.generate', GenerateStaticSiteCommand::class)
         ->args([
             service('.bakslash_static_site.generator'),
+            param('kernel.debug'),
         ])
         ->tag('console.command');
 

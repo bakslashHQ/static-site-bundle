@@ -32,7 +32,7 @@ final class DynamicRouteGenerationTest extends KernelTestCase
         \assert($kernel instanceof DynamicRouteKernel);
 
         $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
-        $exitCode = $tester->execute([]);
+        $exitCode = $tester->execute(['--allow-debug' => true]);
 
         $this->assertSame(0, $exitCode, $tester->getDisplay());
 
@@ -51,7 +51,7 @@ final class DynamicRouteGenerationTest extends KernelTestCase
 
         $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
 
-        $this->assertSame(0, $tester->execute(['--path' => ['/articles/foo']]), $tester->getDisplay());
+        $this->assertSame(0, $tester->execute(['--allow-debug' => true, '--path' => ['/articles/foo']]), $tester->getDisplay());
 
         $outputDir = $kernel->getOutputDir();
         $this->assertFileExists($outputDir.'/articles/foo/index.html');
@@ -65,7 +65,7 @@ final class DynamicRouteGenerationTest extends KernelTestCase
 
         $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
 
-        $this->assertSame(0, $tester->execute(['--route' => ['other_*']]), $tester->getDisplay());
+        $this->assertSame(0, $tester->execute(['--allow-debug' => true, '--route' => ['other_*']]), $tester->getDisplay());
 
         $this->assertDirectoryDoesNotExist($kernel->getOutputDir().'/articles');
     }

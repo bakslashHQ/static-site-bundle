@@ -32,7 +32,7 @@ final class GenerateStaticSiteTest extends KernelTestCase
         \assert($kernel instanceof GenerationKernel);
 
         $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
-        $exitCode = $tester->execute([]);
+        $exitCode = $tester->execute(['--allow-debug' => true]);
 
         $this->assertSame(0, $exitCode, $tester->getDisplay());
 

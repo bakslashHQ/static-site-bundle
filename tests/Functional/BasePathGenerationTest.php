@@ -33,7 +33,7 @@ final class BasePathGenerationTest extends KernelTestCase
         \assert($kernel instanceof BasePathKernel);
 
         $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
-        $exitCode = $tester->execute([]);
+        $exitCode = $tester->execute(['--allow-debug' => true]);
 
         $this->assertSame(0, $exitCode, $tester->getDisplay());
         $this->assertStringContainsString('Generated 3 page(s).', $tester->getDisplay());
@@ -69,7 +69,7 @@ final class BasePathGenerationTest extends KernelTestCase
         // The app's own default URI, which generation must not be allowed to overwrite.
         $this->assertSame(['http', 'localhost', ''], [$context->getScheme(), $context->getHost(), $context->getBaseUrl()]);
 
-        (new CommandTester((new Application($kernel))->find('static-site:generate')))->execute([]);
+        (new CommandTester((new Application($kernel))->find('static-site:generate')))->execute(['--allow-debug' => true]);
 
         // Generating twice in one process must stay correct.
         $this->assertSame(['http', 'localhost', ''], [$context->getScheme(), $context->getHost(), $context->getBaseUrl()]);

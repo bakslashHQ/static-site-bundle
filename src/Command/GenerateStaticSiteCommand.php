@@ -20,6 +20,7 @@ final readonly class GenerateStaticSiteCommand
 {
     public function __construct(
         private StaticSiteGenerator $generator,
+        private bool $debug,
     ) {
     }
 
@@ -33,7 +34,15 @@ final readonly class GenerateStaticSiteCommand
         array $route = [],
         #[Option(description: 'Only generate URIs matching this glob (repeatable).')]
         array $path = [],
+        #[Option(description: 'Generate even though the kernel is in debug mode.')]
+        bool $allowDebug = false,
     ): int {
+        if ($this->debug && !$allowDebug) {
+            $io->error('Refusing to generate in debug mode: pages would carry the web debug toolbar. Run with --env=prod or --allow-debug.');
+
+            return Command::FAILURE;
+        }
+
         $generated = 0;
         $failed = 0;
 

@@ -113,8 +113,11 @@ You can also pass an inline list of parameter sets:
 ### Generating the site
 
 ```bash
-bin/console static-site:generate
+bin/console static-site:generate --env=prod
 ```
+
+A kernel in debug mode injects the web debug toolbar into every page, so the command refuses
+to run there unless you pass `--allow-debug`.
 
 On an interactive terminal the command shows a live counter of generated pages; pass `-v` to
 list each page instead. Failures are always printed, and it exits non-zero if any page failed.
@@ -150,9 +153,8 @@ web server directly at `storage` during a build.
 
 Pages are rendered one at a time in a single process, and the bundle resets Symfony's
 stateful services (`kernel.reset`, e.g. Doctrine's identity map) between each one, so memory
-stays flat no matter how many pages you generate. Run generation with `APP_ENV=prod` for the
-least overhead, and make sure any stateful service of your own implements
-`Symfony\Contracts\Service\ResetInterface` so it is reset between pages too.
+stays flat no matter how many pages you generate. Make sure any stateful service of your own
+implements `Symfony\Contracts\Service\ResetInterface` so it is reset between pages too.
 
 A route's parameter sets are collected before any of its pages are rendered, so
 `provideParameterSets()` runs uninterrupted by those resets; only one route's sets are held at
@@ -230,7 +232,7 @@ steps depend on your app):
 
 ```yaml
 # .github/workflows/deploy.yml (inside a job with pages: write + id-token: write)
-- run: bin/console static-site:generate
+- run: bin/console static-site:generate --env=prod
 - run: touch build/.nojekyll
 - uses: actions/upload-pages-artifact@v3
   with:
