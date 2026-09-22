@@ -46,4 +46,30 @@ final class DynamicRouteGenerationTest extends KernelTestCase
         $this->assertStringContainsString('Article foo', (string) file_get_contents($outputDir.'/articles/foo/index.html'));
         $this->assertStringContainsString('Article bar', (string) file_get_contents($outputDir.'/articles/bar/index.html'));
     }
+
+    public function testThePathOptionRestrictsWhatIsGenerated(): void
+    {
+        $kernel = self::bootKernel();
+        \assert($kernel instanceof DynamicRouteKernel);
+
+        $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
+
+        $this->assertSame(0, $tester->execute(['--path' => ['/articles/foo']]), $tester->getDisplay());
+
+        $outputDir = $kernel->getOutputDir();
+        $this->assertFileExists($outputDir.'/articles/foo/index.html');
+        $this->assertFileDoesNotExist($outputDir.'/articles/bar/index.html');
+    }
+
+    public function testTheRouteOptionRestrictsWhatIsGenerated(): void
+    {
+        $kernel = self::bootKernel();
+        \assert($kernel instanceof DynamicRouteKernel);
+
+        $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
+
+        $this->assertSame(0, $tester->execute(['--route' => ['other_*']]), $tester->getDisplay());
+
+        $this->assertDirectoryDoesNotExist($kernel->getOutputDir().'/articles');
+    }
 }

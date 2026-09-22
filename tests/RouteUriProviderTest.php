@@ -10,9 +10,11 @@ use Bakslash\StaticSiteBundle\Routing\SiteContext;
 use Bakslash\StaticSiteBundle\UriProvider\GenerationFilter;
 use Bakslash\StaticSiteBundle\UriProvider\RouteUriProvider;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\Router;
@@ -186,17 +188,16 @@ final class RouteUriProviderTest extends TestCase
         $this->assertStringContainsString('Route "article"', $results[1]->identifier);
     }
 
-    public function testYieldsAFailureWhenParametersEndUpInTheQueryString(): void
+    /**
+     * @param array<string, mixed> $extraParams
+     */
+    #[DataProvider('unwritableUriProvider')]
+    public function testYieldsAFailureWhenTheGeneratedUriIsNotAPlainPath(array $extraParams, string $expectedUri): void
     {
         $routes = new RouteCollection();
         $routes->add('article', new Route('/article/{slug}', [
             '_static_generation' => [
-                'params' => [[
-                    'slug' => 'ok',
-                ], [
-                    'slug' => 'extra',
-                    'page' => 2,
-                ]],
+                'params' => [['slug' => 'ok'], ['slug' => 'extra'] + $extraParams],
             ],
         ]));
 
@@ -204,8 +205,16 @@ final class RouteUriProviderTest extends TestCase
 
         $this->assertSame('/article/ok', $results[0]);
         $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
-        $this->assertSame('Route "article" ({"slug":"extra","page":2})', $results[1]->identifier);
-        $this->assertSame('Expected route "article" to generate a path without a query string or fragment, got "/article/extra?page=2".', $results[1]->error->getMessage());
+        $this->assertSame(\sprintf('Expected route "article" to generate a path without a query string or fragment, got "%s".', $expectedUri), $results[1]->error->getMessage());
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, string}>
+     */
+    public static function unwritableUriProvider(): iterable
+    {
+        yield 'query string' => [['page' => 2], '/article/extra?page=2'];
+        yield 'fragment' => [['_fragment' => 'top'], '/article/extra#top'];
     }
 
     public function testFiltersByRouteName(): void
@@ -230,20 +239,42 @@ final class RouteUriProviderTest extends TestCase
         $this->assertSame(['/shop'], iterator_to_array($provider->provide(new GenerationFilter(paths: ['/shop*']))));
     }
 
+    public function testPutsTheRequestContextBackWhenValidationAborts(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('post_route', new Route('/post', ['_static_generation' => true], methods: ['POST']));
+
+        $requestContext = new RequestContext();
+        $provider = $this->createProvider($routes, requestContext: $requestContext, baseUri: 'https://example.com/docs');
+
+        try {
+            iterator_to_array($provider->provide());
+        } catch (InvalidConfigurationException) {
+        }
+
+        $this->assertSame('', $requestContext->getBaseUrl());
+        $this->assertSame('localhost', $requestContext->getHost());
+        $this->assertSame('http', $requestContext->getScheme());
+    }
+
     /**
      * @param ServiceLocator<object>|null $paramsProviders
      */
-    private function createProvider(RouteCollection $routes, ?ServiceLocator $paramsProviders = null): RouteUriProvider
-    {
+    private function createProvider(
+        RouteCollection $routes,
+        ?ServiceLocator $paramsProviders = null,
+        ?RequestContext $requestContext = null,
+        string $baseUri = '',
+    ): RouteUriProvider {
         $loader = $this->createStub(LoaderInterface::class);
         $loader->method('load')->willReturn($routes);
 
-        $router = new Router($loader, 'useless');
+        $router = new Router($loader, 'useless', context: $requestContext ?? new RequestContext());
 
         return new RouteUriProvider(
             $router,
             $paramsProviders ?? $this->createStub(ServiceLocator::class),
-            new SiteContext($router->getContext(), ''),
+            new SiteContext($router->getContext(), $baseUri),
         );
     }
 }
