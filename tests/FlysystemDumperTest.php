@@ -90,6 +90,14 @@ final class FlysystemDumperTest extends TestCase
         (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/', '<html></html>', 'html');
     }
 
+    public function testKeepsExplicitHtmlFilesWithCleanUrls(): void
+    {
+        $filesystem = $this->createMock(FilesystemOperator::class);
+        $filesystem->expects($this->once())->method('write')->with('foo.html', 'content');
+
+        (new FlysystemDumper($filesystem, cleanUrls: true))->dump('/foo.html', 'content', 'html');
+    }
+
     public function testKeepsNonHtmlFilesWithCleanUrls(): void
     {
         $filesystem = $this->createMock(FilesystemOperator::class);
