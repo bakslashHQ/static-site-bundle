@@ -42,8 +42,13 @@ final readonly class PageRenderer implements RendererInterface
             $status = $response->getStatusCode();
 
             if ($status >= 300 && $status < 400) {
+                $location = (string) $response->headers->get('Location', '');
+                if ('' === $location) {
+                    throw new RenderingException(\sprintf('URI "%s" returned a %d redirect without a "Location" header.', $uri, $status));
+                }
+
                 // A redirect becomes a static meta-refresh stub pointing at its target.
-                return new RenderedPage($this->redirectStub((string) $response->headers->get('Location', '')), 'html');
+                return new RenderedPage($this->redirectStub($location), 'html');
             }
 
             if (Response::HTTP_OK !== $status) {

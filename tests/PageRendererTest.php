@@ -82,6 +82,16 @@ final class PageRendererTest extends TestCase
         $this->assertStringContainsString('0; url=/new', $page->content);
     }
 
+    public function testThrowOnRedirectWithoutALocation(): void
+    {
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('', Response::HTTP_FOUND));
+
+        $this->expectException(RenderingException::class);
+        $this->expectExceptionMessageToBe('URI "/old" returned a 302 redirect without a "Location" header.');
+        $this->renderer($kernel)->render('/old');
+    }
+
     public function testThrowOnException(): void
     {
         $kernel = $this->createStub(HttpKernelInterface::class);
