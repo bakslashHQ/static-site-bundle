@@ -9,6 +9,10 @@
          failOnRisky="true"
          displayDetailsOnTestsThatTriggerDeprecations="true"
 >
+    <php>
+        <env name="SHELL_VERBOSITY" value="0"/>
+    </php>
+
     <testsuites>
         <testsuite name="StaticSiteBundle Test Suite">
             <directory>tests</directory>
