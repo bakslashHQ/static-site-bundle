@@ -33,8 +33,8 @@ final class StaticSiteGeneratorTest extends TestCase
 
         $this->assertCount(2, $results);
         $this->assertSame('/a', $results[0]->uri);
-        $this->assertTrue($results[0]->successful);
-        $this->assertTrue($results[1]->successful);
+        $this->assertNull($results[0]->error);
+        $this->assertNull($results[1]->error);
     }
 
     public function testGeneratesEachUriOnlyOnce(): void
@@ -67,9 +67,8 @@ final class StaticSiteGeneratorTest extends TestCase
 
         $results = iterator_to_array($this->generator($this->uriProvider(['/broken', '/ok']), $renderer, $dumper)->generate());
 
-        $this->assertFalse($results[0]->successful);
         $this->assertInstanceOf(RenderingException::class, $results[0]->error);
-        $this->assertTrue($results[1]->successful);
+        $this->assertNull($results[1]->error);
     }
 
     public function testUriGenerationFailureBecomesAFailureResult(): void
@@ -83,11 +82,10 @@ final class StaticSiteGeneratorTest extends TestCase
 
         $results = iterator_to_array($this->generator($provider, $renderer, $this->createStub(DumperInterface::class))->generate());
 
-        $this->assertTrue($results[0]->successful);
-        $this->assertFalse($results[1]->successful);
+        $this->assertNull($results[0]->error);
         $this->assertSame('route "article"', $results[1]->uri);
         $this->assertSame($failure->error, $results[1]->error);
-        $this->assertTrue($results[2]->successful);
+        $this->assertNull($results[2]->error);
     }
 
     public function testPageRenderedEventCanTransformTheContent(): void

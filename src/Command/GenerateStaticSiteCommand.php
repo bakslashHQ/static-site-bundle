@@ -37,21 +37,19 @@ final readonly class GenerateStaticSiteCommand
         $generated = 0;
         $failed = 0;
 
-        // A live counter for long runs, shown only for an interactive, non-verbose run: with
-        // "-v" the per-page lines are the progress, and on a non-TTY (CI) a bar would spam logs.
         $progress = !$io->isVerbose() && $io->isDecorated() ? $io->createProgressBar() : null;
         $progress?->setFormat(' <info>%current%</info> pages generated (%elapsed%)');
         $progress?->start();
 
         try {
             foreach ($this->generator->generate(new GenerationFilter($route, $path)) as $result) {
-                if ($result->successful) {
+                if (null === $result->error) {
                     ++$generated;
                     $io->writeln(\sprintf(' <info>✓</info> %s', $result->uri), OutputInterface::VERBOSITY_VERBOSE);
                 } else {
                     ++$failed;
                     $progress?->clear();
-                    $io->writeln(\sprintf(' <error>✗</error> %s: %s', $result->uri, $result->error?->getMessage()));
+                    $io->writeln(\sprintf(' <error>✗</error> %s: %s', $result->uri, $result->error->getMessage()));
                     $progress?->display();
                 }
 

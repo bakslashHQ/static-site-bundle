@@ -11,18 +11,17 @@ final readonly class GenerationResult
 {
     private function __construct(
         public string $uri,
-        public bool $successful,
         public ?\Throwable $error = null,
     ) {
     }
 
     public static function success(string $uri): self
     {
-        return new self($uri, true);
+        return new self($uri);
     }
 
     public static function failure(string $uri, \Throwable $error): self
     {
-        return new self($uri, false, $error);
+        return new self($uri, $error);
     }
 }
