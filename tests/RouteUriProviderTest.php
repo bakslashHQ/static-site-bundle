@@ -6,6 +6,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
+use Bakslash\StaticSiteBundle\Routing\SiteContext;
 use Bakslash\StaticSiteBundle\UriProvider\GenerationFilter;
 use Bakslash\StaticSiteBundle\UriProvider\RouteUriProvider;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
@@ -37,10 +38,7 @@ final class RouteUriProviderTest extends TestCase
             ],
         ]));
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $this->createStub(ServiceLocator::class),
-        );
+        $provider = $this->createProvider($routes);
 
         $this->assertSame(['/static', '/param/foo', '/param/bar'], iterator_to_array($provider->provide()));
     }
@@ -63,10 +61,7 @@ final class RouteUriProviderTest extends TestCase
         $paramsProviders->method('has')->willReturnMap([['fooParamProvider', true]]);
         $paramsProviders->method('get')->willReturnMap([['fooParamProvider', $paramProvider]]);
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $paramsProviders,
-        );
+        $provider = $this->createProvider($routes, $paramsProviders);
 
         $this->assertSame(['/service/foo'], iterator_to_array($provider->provide()));
     }
@@ -78,10 +73,7 @@ final class RouteUriProviderTest extends TestCase
             '_static_generation' => true,
         ], methods: ['POST']));
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $this->createStub(ServiceLocator::class),
-        );
+        $provider = $this->createProvider($routes);
 
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageToBe('Expected route "post_route" to accept GET method, it accepts "POST" only.');
@@ -96,10 +88,7 @@ final class RouteUriProviderTest extends TestCase
             '_stateless' => false,
         ]));
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $this->createStub(ServiceLocator::class),
-        );
+        $provider = $this->createProvider($routes);
 
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageToBe('Expected route "stateful" to be stateless.');
@@ -115,10 +104,7 @@ final class RouteUriProviderTest extends TestCase
             ],
         ]));
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $this->createStub(ServiceLocator::class),
-        );
+        $provider = $this->createProvider($routes);
 
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageToBe('Missing "params" configuration for route "missing_params".');
@@ -132,10 +118,7 @@ final class RouteUriProviderTest extends TestCase
             '_static_generation' => true,
         ]));
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $this->createStub(ServiceLocator::class),
-        );
+        $provider = $this->createProvider($routes);
 
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageToBe('Route "bare_param" has required parameters; configure a "params" provider on its #[Prerender] attribute.');
@@ -154,10 +137,7 @@ final class RouteUriProviderTest extends TestCase
         $paramsProviders = $this->createStub(ServiceLocator::class);
         $paramsProviders->method('has')->willReturn(false);
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $paramsProviders,
-        );
+        $provider = $this->createProvider($routes, $paramsProviders);
 
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageToBe(\sprintf('You have requested a non-existent params provider service "nonExistent". Did you implement "%s"?', ParamsProviderInterface::class));
@@ -177,10 +157,7 @@ final class RouteUriProviderTest extends TestCase
         $paramsProviders->method('has')->willReturnMap([['invalidService', true]]);
         $paramsProviders->method('get')->willReturnMap([['invalidService', new \stdClass()]]);
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $paramsProviders,
-        );
+        $provider = $this->createProvider($routes, $paramsProviders);
 
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessageToBe(\sprintf('The "invalidService" params provider service does not implement "%s".', ParamsProviderInterface::class));
@@ -200,10 +177,7 @@ final class RouteUriProviderTest extends TestCase
             ],
         ]));
 
-        $provider = new RouteUriProvider(
-            $this->createRouter($routes),
-            $this->createStub(ServiceLocator::class),
-        );
+        $provider = $this->createProvider($routes);
 
         $results = iterator_to_array($provider->provide());
 
@@ -218,7 +192,7 @@ final class RouteUriProviderTest extends TestCase
         $routes->add('blog', new Route('/blog', ['_static_generation' => true]));
         $routes->add('shop', new Route('/shop', ['_static_generation' => true]));
 
-        $provider = new RouteUriProvider($this->createRouter($routes), $this->createStub(ServiceLocator::class));
+        $provider = $this->createProvider($routes);
 
         $this->assertSame(['/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog']))));
     }
@@ -229,16 +203,25 @@ final class RouteUriProviderTest extends TestCase
         $routes->add('blog', new Route('/blog', ['_static_generation' => true]));
         $routes->add('shop', new Route('/shop', ['_static_generation' => true]));
 
-        $provider = new RouteUriProvider($this->createRouter($routes), $this->createStub(ServiceLocator::class));
+        $provider = $this->createProvider($routes);
 
         $this->assertSame(['/shop'], iterator_to_array($provider->provide(new GenerationFilter(paths: ['/shop*']))));
     }
 
-    private function createRouter(RouteCollection $routes): Router
+    /**
+     * @param ServiceLocator<object>|null $paramsProviders
+     */
+    private function createProvider(RouteCollection $routes, ?ServiceLocator $paramsProviders = null): RouteUriProvider
     {
         $loader = $this->createStub(LoaderInterface::class);
         $loader->method('load')->willReturn($routes);
 
-        return new Router($loader, 'useless');
+        $router = new Router($loader, 'useless');
+
+        return new RouteUriProvider(
+            $router,
+            $paramsProviders ?? $this->createStub(ServiceLocator::class),
+            new SiteContext($router->getContext(), ''),
+        );
     }
 }

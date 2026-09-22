@@ -7,6 +7,7 @@ namespace Bakslash\StaticSiteBundle\UriProvider;
 use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use Bakslash\StaticSiteBundle\Routing\PrerenderRouteLoader;
+use Bakslash\StaticSiteBundle\Routing\SiteContext;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Routing\Exception\InvalidParameterException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
@@ -23,39 +24,45 @@ final readonly class RouteUriProvider implements UriProviderInterface
     public function __construct(
         private RouterInterface $router,
         private ServiceLocator $paramsProviders,
+        private SiteContext $siteContext,
     ) {
     }
 
     public function provide(?GenerationFilter $filter = null): iterable
     {
         $filter ??= new GenerationFilter();
-        $baseUrl = $this->router->getContext()->getBaseUrl();
 
-        foreach ($this->generatableRoutes($filter) as $routeName => $params) {
-            if (null === $params) {
-                $uri = $this->stripBaseUrl($this->generate($routeName, []), $baseUrl);
-                if ($filter->matchesPath($uri)) {
-                    yield $uri;
-                }
+        try {
+            $this->siteContext->enter();
 
-                continue;
-            }
-
-            foreach ($this->getParamsList($params) as $paramSet) {
-                try {
-                    $uri = $this->router->generate($routeName, $paramSet, RouterInterface::ABSOLUTE_PATH);
-                } catch (MissingMandatoryParametersException|InvalidParameterException $exception) {
-                    // A single bad parameter set (e.g. a null slug) fails only its own page.
-                    yield new UriGenerationFailure(\sprintf('route "%s" (%s)', $routeName, json_encode($paramSet) ?: '{}'), $exception);
+            foreach ($this->generatableRoutes($filter) as $routeName => $params) {
+                if (null === $params) {
+                    $uri = $this->stripBasePath($this->generate($routeName, []));
+                    if ($filter->matchesPath($uri)) {
+                        yield $uri;
+                    }
 
                     continue;
                 }
 
-                $uri = $this->stripBaseUrl($uri, $baseUrl);
-                if ($filter->matchesPath($uri)) {
-                    yield $uri;
+                foreach ($this->getParamsList($params) as $paramSet) {
+                    try {
+                        $uri = $this->router->generate($routeName, $paramSet, RouterInterface::ABSOLUTE_PATH);
+                    } catch (MissingMandatoryParametersException|InvalidParameterException $exception) {
+                        // A single bad parameter set (e.g. a null slug) fails only its own page.
+                        yield new UriGenerationFailure(\sprintf('route "%s" (%s)', $routeName, json_encode($paramSet) ?: '{}'), $exception);
+
+                        continue;
+                    }
+
+                    $uri = $this->stripBasePath($uri);
+                    if ($filter->matchesPath($uri)) {
+                        yield $uri;
+                    }
                 }
             }
+        } finally {
+            $this->siteContext->leave();
         }
     }
 
@@ -119,10 +126,12 @@ final readonly class RouteUriProvider implements UriProviderInterface
         }
     }
 
-    private function stripBaseUrl(string $uri, string $baseUrl): string
+    private function stripBasePath(string $uri): string
     {
-        if ('' !== $baseUrl && str_starts_with($uri, $baseUrl)) {
-            $uri = substr($uri, \strlen($baseUrl));
+        $basePath = $this->siteContext->basePath();
+
+        if ('' !== $basePath && str_starts_with($uri, $basePath)) {
+            $uri = substr($uri, \strlen($basePath));
         }
 
         return '' !== $uri ? $uri : '/';

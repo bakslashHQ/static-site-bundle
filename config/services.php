@@ -9,6 +9,7 @@ use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use Bakslash\StaticSiteBundle\Renderer\PageRenderer;
 use Bakslash\StaticSiteBundle\Routing\PrerenderRouteLoader;
+use Bakslash\StaticSiteBundle\Routing\SiteContext;
 use Bakslash\StaticSiteBundle\UriProvider\RouteUriProvider;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -25,18 +26,24 @@ return static function (ContainerConfigurator $container): void {
             service('.inner'),
         ]);
 
+    $services->set('.bakslash_static_site.site_context', SiteContext::class)
+        ->args([
+            service('router.request_context'),
+            param('bakslash_static_site.base_uri'),
+        ]);
+
     $services->set('bakslash_static_site.uri_provider', RouteUriProvider::class)
         ->args([
             service('router'),
             tagged_locator(ParamsProviderInterface::TAG),
+            service('.bakslash_static_site.site_context'),
         ]);
 
     $services->set('bakslash_static_site.renderer', PageRenderer::class)
         ->args([
             service('http_kernel'),
             service('services_resetter'),
-            service('router.request_context'),
-            param('bakslash_static_site.base_uri'),
+            service('.bakslash_static_site.site_context'),
         ]);
 
     $services->set('bakslash_static_site.dumper', FlysystemDumper::class)

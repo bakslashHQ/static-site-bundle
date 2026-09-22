@@ -6,7 +6,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Renderer\PageRenderer;
-use PHPUnit\Framework\Attributes\DataProvider;
+use Bakslash\StaticSiteBundle\Routing\SiteContext;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -58,53 +58,6 @@ final class PageRendererTest extends TestCase
         $page = $this->renderer($kernel)->render('/blog/feed.xml');
 
         $this->assertSame('xml', $page->format);
-    }
-
-    public function testDerivesBasePathFromBaseUri(): void
-    {
-        $captured = null;
-        $kernel = $this->createStub(HttpKernelInterface::class);
-        $kernel->method('handle')->willReturnCallback(static function (Request $request) use (&$captured): Response {
-            $captured = $request;
-
-            return new Response('ok');
-        });
-
-        $this->renderer($kernel, 'https://example.com/my-app/')->render('/foo');
-
-        $this->assertInstanceOf(Request::class, $captured);
-        $this->assertSame('https://example.com/my-app/foo', $captured->getUri());
-        $this->assertSame('/my-app', $captured->getBasePath());
-        $this->assertSame('/foo', $captured->getPathInfo());
-    }
-
-    #[DataProvider('scriptNameProvider')]
-    public function testSetsScriptServerVarsFromBaseUri(string $baseUri, string $expectedScriptName): void
-    {
-        $captured = null;
-        $kernel = $this->createStub(HttpKernelInterface::class);
-        $kernel->method('handle')->willReturnCallback(static function (Request $request) use (&$captured): Response {
-            $captured = $request;
-
-            return new Response('ok');
-        });
-
-        $this->renderer($kernel, $baseUri)->render('/foo');
-
-        $this->assertInstanceOf(Request::class, $captured);
-        $this->assertSame($expectedScriptName, $captured->server->get('SCRIPT_NAME'));
-        $this->assertSame($expectedScriptName, $captured->server->get('SCRIPT_FILENAME'));
-    }
-
-    /**
-     * @return iterable<string, array{string, string}>
-     */
-    public static function scriptNameProvider(): iterable
-    {
-        yield 'sub-path' => ['https://example.com/my-app', '/my-app/index.php'];
-        yield 'sub-path with trailing slash' => ['https://example.com/my-app/', '/my-app/index.php'];
-        yield 'no path' => ['http://localhost', '/index.php'];
-        yield 'empty base uri' => ['', '/index.php'];
     }
 
     public function testThrowOnNotOk(): void
@@ -171,7 +124,7 @@ final class PageRendererTest extends TestCase
             ->with($this->isInstanceOf(Request::class), HttpKernelInterface::MAIN_REQUEST, false)
             ->willReturn(new Response('ok'));
 
-        (new PageRenderer($kernel, $this->createStub(ResetInterface::class), new RequestContext(), 'http://localhost'))->render('/foo');
+        $this->renderer($kernel)->render('/foo');
     }
 
     public function testResetsServicesAfterSuccess(): void
@@ -182,7 +135,7 @@ final class PageRendererTest extends TestCase
         $resetter = $this->createMock(ResetInterface::class);
         $resetter->expects($this->once())->method('reset');
 
-        (new PageRenderer($kernel, $resetter, new RequestContext(), 'http://localhost'))->render('/foo');
+        $this->renderer($kernel, $resetter)->render('/foo');
     }
 
     public function testResetsServicesAfterFailure(): void
@@ -194,39 +147,17 @@ final class PageRendererTest extends TestCase
         $resetter->expects($this->once())->method('reset');
 
         try {
-            (new PageRenderer($kernel, $resetter, new RequestContext(), 'http://localhost'))->render('/whatever');
+            $this->renderer($kernel, $resetter)->render('/whatever');
         } catch (RenderingException) {
         }
     }
 
-    #[DataProvider('contextProvider')]
-    public function testFallsBackToTheRouterContextWhenBaseUriIsEmpty(RequestContext $context, string $expectedUri): void
+    private function renderer(HttpKernelInterface $kernel, ?ResetInterface $servicesResetter = null): PageRenderer
     {
-        $captured = null;
-        $kernel = $this->createStub(HttpKernelInterface::class);
-        $kernel->method('handle')->willReturnCallback(static function (Request $request) use (&$captured): Response {
-            $captured = $request;
-
-            return new Response('ok');
-        });
-
-        (new PageRenderer($kernel, $this->createStub(ResetInterface::class), $context, ''))->render('/foo');
-
-        $this->assertInstanceOf(Request::class, $captured);
-        $this->assertSame($expectedUri, $captured->getUri());
-    }
-
-    /**
-     * @return iterable<string, array{RequestContext, string}>
-     */
-    public static function contextProvider(): iterable
-    {
-        yield 'scheme, host and base path' => [new RequestContext('/my-app', 'GET', 'example.com', 'https'), 'https://example.com/my-app/foo'];
-        yield 'non-standard port' => [new RequestContext('', 'GET', 'example.com', 'http', 8080), 'http://example.com:8080/foo'];
-    }
-
-    private function renderer(HttpKernelInterface $kernel, string $baseUri = 'http://localhost'): PageRenderer
-    {
-        return new PageRenderer($kernel, $this->createStub(ResetInterface::class), new RequestContext(), $baseUri);
+        return new PageRenderer(
+            $kernel,
+            $servicesResetter ?? $this->createStub(ResetInterface::class),
+            new SiteContext(new RequestContext(), 'http://localhost'),
+        );
     }
 }
