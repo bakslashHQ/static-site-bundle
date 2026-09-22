@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\Renderer;
 
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
-use Symfony\Component\DependencyInjection\ServicesResetterInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Routing\RequestContext;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * @internal
@@ -18,7 +18,7 @@ final readonly class PageRenderer implements RendererInterface
 {
     public function __construct(
         private HttpKernelInterface $kernel,
-        private ServicesResetterInterface $servicesResetter,
+        private ResetInterface $servicesResetter,
         private RequestContext $requestContext,
         private string $baseUri,
     ) {

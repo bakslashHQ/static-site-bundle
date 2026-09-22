@@ -8,12 +8,12 @@ use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Renderer\PageRenderer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\DependencyInjection\ServicesResetterInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\Routing\RequestContext;
+use Symfony\Contracts\Service\ResetInterface;
 
 final class PageRendererTest extends TestCase
 {
@@ -169,7 +169,7 @@ final class PageRendererTest extends TestCase
             ->with($this->isInstanceOf(Request::class), HttpKernelInterface::MAIN_REQUEST, false)
             ->willReturn(new Response('ok'));
 
-        (new PageRenderer($kernel, $this->createStub(ServicesResetterInterface::class), new RequestContext(), 'http://localhost'))->render('/foo');
+        (new PageRenderer($kernel, $this->createStub(ResetInterface::class), new RequestContext(), 'http://localhost'))->render('/foo');
     }
 
     public function testResetsServicesAfterSuccess(): void
@@ -177,7 +177,7 @@ final class PageRendererTest extends TestCase
         $kernel = $this->createStub(HttpKernelInterface::class);
         $kernel->method('handle')->willReturn(new Response('ok'));
 
-        $resetter = $this->createMock(ServicesResetterInterface::class);
+        $resetter = $this->createMock(ResetInterface::class);
         $resetter->expects($this->once())->method('reset');
 
         (new PageRenderer($kernel, $resetter, new RequestContext(), 'http://localhost'))->render('/foo');
@@ -188,7 +188,7 @@ final class PageRendererTest extends TestCase
         $kernel = $this->createStub(HttpKernelInterface::class);
         $kernel->method('handle')->willReturn(new Response('boom', Response::HTTP_INTERNAL_SERVER_ERROR));
 
-        $resetter = $this->createMock(ServicesResetterInterface::class);
+        $resetter = $this->createMock(ResetInterface::class);
         $resetter->expects($this->once())->method('reset');
 
         try {
@@ -208,7 +208,7 @@ final class PageRendererTest extends TestCase
             return new Response('ok');
         });
 
-        (new PageRenderer($kernel, $this->createStub(ServicesResetterInterface::class), $context, ''))->render('/foo');
+        (new PageRenderer($kernel, $this->createStub(ResetInterface::class), $context, ''))->render('/foo');
 
         $this->assertInstanceOf(Request::class, $captured);
         $this->assertSame($expectedUri, $captured->getUri());
@@ -225,6 +225,6 @@ final class PageRendererTest extends TestCase
 
     private function renderer(HttpKernelInterface $kernel, string $baseUri = 'http://localhost'): PageRenderer
     {
-        return new PageRenderer($kernel, $this->createStub(ServicesResetterInterface::class), new RequestContext(), $baseUri);
+        return new PageRenderer($kernel, $this->createStub(ResetInterface::class), new RequestContext(), $baseUri);
     }
 }
