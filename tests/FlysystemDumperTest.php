@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 final class FlysystemDumperTest extends TestCase
 {
+    use ExpectsExceptionMessage;
+
     public function testWritesToTheResolvedPath(): void
     {
         $filesystem = $this->createMock(FilesystemOperator::class);
@@ -68,7 +70,7 @@ final class FlysystemDumperTest extends TestCase
         $dumper = new FlysystemDumper($filesystem);
 
         $this->expectException(DumpingException::class);
-        $this->expectExceptionMessageIs('Cannot dump page for URI "/foo".');
+        $this->expectExceptionMessageToBe('Cannot dump page for URI "/foo".');
         $dumper->dump('/foo', 'content');
     }
 

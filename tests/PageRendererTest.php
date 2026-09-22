@@ -17,6 +17,8 @@ use Symfony\Contracts\Service\ResetInterface;
 
 final class PageRendererTest extends TestCase
 {
+    use ExpectsExceptionMessage;
+
     public function testRenderContent(): void
     {
         $kernel = $this->createStub(HttpKernelInterface::class);
@@ -111,7 +113,7 @@ final class PageRendererTest extends TestCase
         $kernel->method('handle')->willReturn(new Response('not-found', Response::HTTP_NOT_FOUND));
 
         $this->expectException(RenderingException::class);
-        $this->expectExceptionMessageIs('Expected URI "/whatever" to return HTTP 200 or a redirect, got 404.');
+        $this->expectExceptionMessageToBe('Expected URI "/whatever" to return HTTP 200 or a redirect, got 404.');
         $this->renderer($kernel)->render('/whatever');
     }
 
@@ -133,7 +135,7 @@ final class PageRendererTest extends TestCase
         $kernel->method('handle')->willThrowException(new \RuntimeException('Kernel error'));
 
         $this->expectException(RenderingException::class);
-        $this->expectExceptionMessageIs('Cannot render page for URI "/whatever": Kernel error');
+        $this->expectExceptionMessageToBe('Cannot render page for URI "/whatever": Kernel error');
         $this->renderer($kernel)->render('/whatever');
     }
 
@@ -157,7 +159,7 @@ final class PageRendererTest extends TestCase
         $kernel->method('handle')->willReturn(new StreamedResponse(static fn () => print ('streamed')));
 
         $this->expectException(RenderingException::class);
-        $this->expectExceptionMessageIs('URI "/whatever" returned a response whose content cannot be captured (streamed and binary responses are not supported).');
+        $this->expectExceptionMessageToBe('URI "/whatever" returned a response whose content cannot be captured (streamed and binary responses are not supported).');
         $this->renderer($kernel)->render('/whatever');
     }
 

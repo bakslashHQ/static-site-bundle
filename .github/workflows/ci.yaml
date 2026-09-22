@@ -12,8 +12,8 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # lowest deps pull Symfony 7.4; highest on PHP 8.4 pulls the latest Symfony 8.x.
-                php: ['8.3', '8.4']
+                # lowest deps pull Symfony 7.4; highest pulls the latest Symfony 8.x.
+                php: ['8.3', '8.4', '8.5']
                 dependencies: ['lowest', 'highest']
         steps:
             - uses: actions/checkout@v4

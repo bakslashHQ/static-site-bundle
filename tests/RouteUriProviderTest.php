@@ -18,6 +18,8 @@ use Symfony\Component\Routing\Router;
 
 final class RouteUriProviderTest extends TestCase
 {
+    use ExpectsExceptionMessage;
+
     public function testProvideUris(): void
     {
         $routes = new RouteCollection();
@@ -82,7 +84,7 @@ final class RouteUriProviderTest extends TestCase
         );
 
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageIs('Expected route "post_route" to accept GET method, it accepts "POST" only.');
+        $this->expectExceptionMessageToBe('Expected route "post_route" to accept GET method, it accepts "POST" only.');
         iterator_to_array($provider->provide());
     }
 
@@ -100,7 +102,7 @@ final class RouteUriProviderTest extends TestCase
         );
 
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageIs('Expected route "stateful" to be stateless.');
+        $this->expectExceptionMessageToBe('Expected route "stateful" to be stateless.');
         iterator_to_array($provider->provide());
     }
 
@@ -119,7 +121,7 @@ final class RouteUriProviderTest extends TestCase
         );
 
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageIs('Missing "params" configuration for route "missing_params".');
+        $this->expectExceptionMessageToBe('Missing "params" configuration for route "missing_params".');
         iterator_to_array($provider->provide());
     }
 
@@ -136,7 +138,7 @@ final class RouteUriProviderTest extends TestCase
         );
 
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageIs('Route "bare_param" has required parameters; configure a "params" provider on its #[Prerender] attribute.');
+        $this->expectExceptionMessageToBe('Route "bare_param" has required parameters; configure a "params" provider on its #[Prerender] attribute.');
         iterator_to_array($provider->provide());
     }
 
@@ -158,7 +160,7 @@ final class RouteUriProviderTest extends TestCase
         );
 
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageIs(\sprintf('You have requested a non-existent params provider service "nonExistent". Did you implement "%s"?', ParamsProviderInterface::class));
+        $this->expectExceptionMessageToBe(\sprintf('You have requested a non-existent params provider service "nonExistent". Did you implement "%s"?', ParamsProviderInterface::class));
         iterator_to_array($provider->provide());
     }
 
@@ -181,7 +183,7 @@ final class RouteUriProviderTest extends TestCase
         );
 
         $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessageIs(\sprintf('The "invalidService" params provider service does not implement "%s".', ParamsProviderInterface::class));
+        $this->expectExceptionMessageToBe(\sprintf('The "invalidService" params provider service does not implement "%s".', ParamsProviderInterface::class));
         iterator_to_array($provider->provide());
     }
 
