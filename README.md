@@ -34,7 +34,8 @@ return [
 # config/packages/bakslash_static_site.yaml
 bakslash_static_site:
     # Where the generated site is written: a local directory path, or a Flysystem
-    # operator service reference ("@service_id"). See "Storage backend" below.
+    # operator service reference ("@service_id"). A relative path resolves against the
+    # working directory, so prefer an absolute one. See "Storage backend" below.
     storage: '%kernel.project_dir%/build'
 
     # The absolute URL the generated site is served from, used for the absolute links baked

@@ -37,7 +37,7 @@ final class BakslashStaticSiteBundle extends AbstractBundle
                     ->defaultFalse()
                 ->end()
                 ->scalarNode('storage')
-                    ->info('Where the generated site is written: a local directory path, or a Flysystem operator service reference ("@service_id").')
+                    ->info('Where the generated site is written: a local directory path (a relative one resolves against the working directory), or a Flysystem operator service reference ("@service_id").')
                     ->defaultValue('%kernel.project_dir%/build')
                     ->cannotBeEmpty()
                 ->end()
