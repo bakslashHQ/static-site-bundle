@@ -68,8 +68,8 @@ final class ViewHomepage
 }
 ```
 
-`#[Prerender]` can be placed on a controller method or, for invokable
-controllers, on the class.
+`#[Prerender]` can be placed on a controller method, or on the class to mark every action it
+holds; a method-level attribute overrides the class-level one.
 
 ### Dynamic routes
 

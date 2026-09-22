@@ -127,6 +127,34 @@ final class PrerenderRouteLoaderTest extends TestCase
         $this->assertNull($route->getDefault('_static_generation'));
     }
 
+    public function testClassLevelAttributeAppliesToEveryAction(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('list', new Route('/items', [
+            '_controller' => MultiActionPrerenderController::class.'::list',
+        ]));
+
+        $collection = $this->load($routes);
+
+        $route = $collection->get('list');
+        $this->assertInstanceOf(Route::class, $route);
+        $this->assertTrue($route->getDefault('_static_generation'));
+    }
+
+    public function testMethodLevelAttributeOverridesTheClassLevelOne(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('show', new Route('/items/{id}', [
+            '_controller' => MultiActionPrerenderController::class.'::show',
+        ]));
+
+        $collection = $this->load($routes);
+
+        $route = $collection->get('show');
+        $this->assertInstanceOf(Route::class, $route);
+        $this->assertSame(['params' => StubParamsProvider::class], $route->getDefault('_static_generation'));
+    }
+
     private function load(RouteCollection $routes): RouteCollection
     {
         $inner = $this->createStub(LoaderInterface::class);
@@ -161,6 +189,19 @@ final class PrerenderWithParamsController
 final class ClassLevelPrerenderController
 {
     public function __invoke(): void
+    {
+    }
+}
+
+#[Prerender]
+final class MultiActionPrerenderController
+{
+    public function list(): void
+    {
+    }
+
+    #[Prerender(params: StubParamsProvider::class)]
+    public function show(): void
     {
     }
 }
