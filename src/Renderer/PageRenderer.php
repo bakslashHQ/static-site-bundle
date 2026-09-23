@@ -44,6 +44,10 @@ final readonly class PageRenderer implements RendererInterface
                 throw new RenderingException(\sprintf('URI "%s" returned a %d redirect without a "Location" header.', $uri, $status));
             }
 
+            if (!str_starts_with($location, '/') && !preg_match('#^https?://#i', $location)) {
+                throw new RenderingException(\sprintf('URI "%s" redirects to "%s"; a static page can only redirect to an http(s) or site-relative target.', $uri, $location));
+            }
+
             return new RenderedPage($this->redirectStub($location), 'html');
         }
 

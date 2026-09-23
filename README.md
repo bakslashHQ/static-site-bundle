@@ -170,9 +170,11 @@ it serve `foo.html` when `/foo` is requested. For a custom error page, add a pre
 which the examples below reference (the server sets the actual 404 status).
 
 A route that returns a redirect (3xx) is written as a static meta-refresh stub pointing at its
-`Location`, so public canonical redirects work on any host. Because of this, don't prerender
-authenticated routes: an unauthenticated generation request would capture their login
-redirect. Any other non-2xx response fails the page (so bugs and stale data surface).
+`Location`, so public canonical redirects work on any host. The stub turns the target into a
+link, so only http(s) and site-relative targets are written; anything else fails the page.
+Because of this, don't prerender authenticated routes: an unauthenticated generation request
+would capture their login redirect. Any other non-2xx response fails the page (so bugs and
+stale data surface).
 
 If you set `clean_urls: true`, pages are written as `<path>/index.html` instead, and every
 server serves clean URLs out of the box, so the rewrite rules below become unnecessary.

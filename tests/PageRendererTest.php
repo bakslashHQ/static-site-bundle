@@ -7,6 +7,7 @@ namespace Bakslash\StaticSiteBundle\Tests;
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Renderer\PageRenderer;
 use Bakslash\StaticSiteBundle\Routing\SiteContext;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,6 +80,28 @@ final class PageRendererTest extends TestCase
         $this->assertSame('html', $page->format);
         $this->assertStringContainsString('http-equiv="refresh"', $page->content);
         $this->assertStringContainsString('0; url=/new', $page->content);
+    }
+
+    #[DataProvider('unsupportedRedirectTargetProvider')]
+    public function testThrowOnARedirectTargetAStaticPageCannotLinkTo(string $location): void
+    {
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('', Response::HTTP_FOUND, ['Location' => $location]));
+
+        $this->expectException(RenderingException::class);
+        $this->expectExceptionMessageToBe(\sprintf('URI "/old" redirects to "%s"; a static page can only redirect to an http(s) or site-relative target.', $location));
+        $this->renderer($kernel)->render('/old');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function unsupportedRedirectTargetProvider(): iterable
+    {
+        yield 'javascript' => ['javascript:alert(document.domain)'];
+        yield 'obfuscated javascript' => ["java\tscript:alert(1)"];
+        yield 'data' => ['data:text/html,<script>alert(1)</script>'];
+        yield 'mailto' => ['mailto:someone@example.com'];
     }
 
     public function testKeepsARedirectTargetThatIsNotValidUtf8(): void
