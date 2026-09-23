@@ -270,6 +270,21 @@ final class RouteUriProviderTest extends TestCase
         $this->assertSame(3, $produced);
     }
 
+    public function testYieldsAFailureWhenTheRouterGeneratesAnEmptyUri(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('article', new Route('/articles/{slug}', [
+            '_static_generation' => ['params' => [['slug' => 'good'], ['slug' => 'not/a/slug']]],
+        ]));
+
+        // Without strict requirements the router returns "" rather than throwing.
+        $results = iterator_to_array($this->createProvider($routes, strictRequirements: false)->provide());
+
+        $this->assertSame('/articles/good', $results[0]);
+        $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
+        $this->assertStringContainsString('got an empty one', $results[1]->error->getMessage());
+    }
+
     public function testPutsTheRequestContextBackWhenValidationAborts(): void
     {
         $routes = new RouteCollection();
@@ -296,11 +311,12 @@ final class RouteUriProviderTest extends TestCase
         ?ServiceLocator $paramsProviders = null,
         ?RequestContext $requestContext = null,
         string $baseUri = '',
+        bool $strictRequirements = true,
     ): RouteUriProvider {
         $loader = $this->createStub(LoaderInterface::class);
         $loader->method('load')->willReturn($routes);
 
-        $router = new Router($loader, 'useless', context: $requestContext ?? new RequestContext());
+        $router = new Router($loader, 'useless', ['strict_requirements' => $strictRequirements], $requestContext ?? new RequestContext());
 
         return new RouteUriProvider(
             $router,

@@ -53,6 +53,15 @@ final readonly class RouteUriProvider implements UriProviderInterface
                         continue;
                     }
 
+                    if ('' === $uri) {
+                        yield new UriGenerationFailure(
+                            $this->pageIdentifier($routeName, $paramSet),
+                            new InvalidConfigurationException(\sprintf('Expected route "%s" to generate a URI, got an empty one; its parameters do not satisfy the route requirements.', $routeName)),
+                        );
+
+                        continue;
+                    }
+
                     // Parameters the route has no placeholder for land in the query string.
                     if (false !== strpbrk($uri, '?#')) {
                         yield new UriGenerationFailure(
@@ -128,10 +137,16 @@ final readonly class RouteUriProvider implements UriProviderInterface
     private function generate(string $routeName, array $parameters): string
     {
         try {
-            return $this->router->generate($routeName, $parameters, RouterInterface::ABSOLUTE_PATH);
+            $uri = $this->router->generate($routeName, $parameters, RouterInterface::ABSOLUTE_PATH);
         } catch (MissingMandatoryParametersException $exception) {
             throw new InvalidConfigurationException(\sprintf('Route "%s" has required parameters; configure a "params" provider on its #[Prerender] attribute.', $routeName), previous: $exception);
         }
+
+        if ('' === $uri) {
+            throw new InvalidConfigurationException(\sprintf('Expected route "%s" to generate a URI, got an empty one; its defaults do not satisfy the route requirements.', $routeName));
+        }
+
+        return $uri;
     }
 
     /**
