@@ -1,16 +1,7 @@
 # StaticSiteBundle
 
-Generate a static site by prerendering your Symfony routes into plain HTML (and
-other) files, ready to be served by any static host or CDN.
-
-## How it works
-
-Mark the controllers you want to export as static with the `#[Prerender]`
-attribute, then run a single command. The bundle boots the kernel for each
-matching route, captures the rendered response and writes it to the configured storage.
-
-The kernel is handled but not terminated between pages, so `kernel.terminate` work (deferred
-emails, Messenger dispatch, ...) does not run during generation.
+Generate a static site by prerendering your Symfony routes into plain HTML (and other) files,
+ready to be served by any static host or CDN.
 
 ## Installation
 
@@ -28,32 +19,9 @@ return [
 ];
 ```
 
-## Configuration
-
-```yaml
-# config/packages/bakslash_static_site.yaml
-bakslash_static_site:
-    # Where the generated site is written: a local directory path, or a Flysystem
-    # operator service reference ("@service_id"). A relative path resolves against the
-    # working directory, so prefer an absolute one. See "Storage backend" below.
-    storage: '%kernel.project_dir%/build'
-
-    # The absolute URL the generated site is served from, used for the absolute links baked
-    # into the pages (canonical, og:, sitemaps, feeds); may include a base path (e.g.
-    # "https://example.com/docs"). Defaults to framework.router.default_uri when omitted.
-    base_uri: '%env(DEFAULT_URI)%'
-
-    # Minify generated HTML and XML pages (requires sensiolabs/minify-bundle).
-    minify: false
-
-    # Write HTML pages as "<path>/index.html" instead of "<path>.html", so the site serves
-    # clean URLs with no server rewrite rules (see "Serving the generated site").
-    clean_urls: false
-```
-
 ## Usage
 
-### Static routes
+Mark the controllers you want to export with `#[Prerender]`:
 
 ```php
 use Bakslash\StaticSiteBundle\Attribute\Prerender;
@@ -69,13 +37,12 @@ final class ViewHomepage
 }
 ```
 
-`#[Prerender]` can be placed on a controller method, or on the class to mark every action it
-holds; a method-level attribute overrides the class-level one.
+On a class, it marks every action it holds; a method-level attribute overrides it.
 
-### Dynamic routes
+### Routes with parameters
 
-For routes with parameters, point `#[Prerender]` at a `ParamsProviderInterface`
-implementation that yields one parameter set per page to generate:
+Point `#[Prerender]` at a `ParamsProviderInterface` implementation that yields one parameter
+set per page to generate:
 
 ```php
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
@@ -104,11 +71,8 @@ public function __invoke(string $slug): Response
 }
 ```
 
-You can also pass an inline list of parameter sets:
-
-```php
-#[Prerender(params: [['slug' => 'first'], ['slug' => 'second']])]
-```
+Short lists can be inlined:
+`#[Prerender(params: [['slug' => 'first'], ['slug' => 'second']])]`.
 
 ### Generating the site
 
@@ -117,67 +81,83 @@ bin/console static-site:generate --env=prod
 ```
 
 A kernel in debug mode injects the web debug toolbar into every page, so the command refuses
-to run there unless you pass `--allow-debug`.
+to run there unless you pass `--allow-debug`. Pass `-v` to list each page as it is written; it
+exits non-zero if any page failed.
 
-On an interactive terminal the command shows a live counter of generated pages; pass `-v` to
-list each page instead. Failures are always printed, and it exits non-zero if any page failed.
-
-To regenerate only part of the site, filter by route name or by URI. Both options accept
-[glob patterns](https://www.php.net/fnmatch) and are repeatable:
+Both commands take repeatable `--route` and `--path` globs, so you can regenerate part of the
+site, or preview what would be written without writing it:
 
 ```bash
-bin/console static-site:generate --route='blog_*' --path='/blog/*'
-```
-
-To preview what would be generated without writing anything, run `static-site:list`, which
-takes the same `--route`/`--path` options:
-
-```bash
+bin/console static-site:generate --env=prod --route='blog_*' --path='/blog/*'
 bin/console static-site:list
 ```
 
 The command **only writes pages, and never deletes anything.** When you remove or rename a
-route, its previously generated file stays in `storage`; you are responsible for removing
-stale files yourself. The natural place to do that (it also gives you atomic publishing) is
-your deploy step, which is built for it:
+route, its previously generated file stays behind, and generation is not atomic. Publish the
+output rather than pointing a web server at `storage` during a build, and let the deploy step
+prune:
 
 ```bash
 rsync -a --delete build/ user@host:/var/www/site/
 aws s3 sync build/ s3://my-bucket --delete
 ```
 
-Generation is not atomic either, so publish the generated output rather than pointing your
-web server directly at `storage` during a build.
+Pages are rendered one at a time, and Symfony's stateful services are reset between them
+(`kernel.reset`, e.g. Doctrine's identity map), so make sure your own stateful services
+implement `Symfony\Contracts\Service\ResetInterface`. `kernel.terminate` never runs, so work
+deferred to it (emails, Messenger dispatch, ...) does not fire during generation.
 
-### Large sites
+## Configuration
 
-Pages are rendered one at a time in a single process, and the bundle resets Symfony's
-stateful services (`kernel.reset`, e.g. Doctrine's identity map) between each one, so memory
-stays flat no matter how many pages you generate. Make sure any stateful service of your own
-implements `Symfony\Contracts\Service\ResetInterface` so it is reset between pages too.
+```yaml
+# config/packages/bakslash_static_site.yaml
+bakslash_static_site:
+    # A local directory (prefer an absolute path), or a Flysystem operator service ("@id").
+    storage: '%kernel.project_dir%/build'
 
-A route's parameter sets are collected before any of its pages are rendered, so
-`provideParameterSets()` runs uninterrupted by those resets; only one route's sets are held at
-a time.
+    # The absolute URL the site is served from, used for the links baked into the pages
+    # (canonical, og:, sitemaps, feeds). May include a base path, e.g.
+    # "https://example.com/docs". Defaults to framework.router.default_uri.
+    base_uri: '%env(DEFAULT_URI)%'
+
+    # Minify generated HTML and XML pages. Requires sensiolabs/minify-bundle.
+    minify: false
+
+    # Write HTML pages as "<path>/index.html" instead of "<path>.html", so any server
+    # serves clean URLs without rewrite rules.
+    clean_urls: false
+```
+
+To write somewhere other than the local filesystem, point `storage` at a Flysystem operator
+you configured yourself, for instance with
+[`league/flysystem-bundle`](https://github.com/thephpleague/flysystem-bundle):
+
+```yaml
+bakslash_static_site:
+    storage: '@flysystem.storage.static_site'
+```
 
 ## Serving the generated site
 
-Pages are written as `<path>.html`, and a path ending in a slash as `<path>index.html`, so
-`/` becomes `index.html`. For example the route `/articles/{slug}` becomes
-`articles/<slug>.html`. Point your server's document root at the generated directory and have
-it serve `foo.html` when `/foo` is requested. For a custom error page, add a prerendered
-`/404` route that returns a 200 response with your error markup; it is written as `404.html`,
-which the examples below reference (the server sets the actual 404 status).
+Pages are written as `<path>.<format>`, where the format comes from the route's `_format`, or
+from the response `Content-Type`, and falls back to HTML. So `/articles/{slug}` becomes
+`articles/<slug>.html` and an XML feed at `/feed` becomes `feed.xml`. A path ending in a slash
+gets `index` appended, so `/` becomes `index.html`.
 
-A route that returns a redirect (3xx) is written as a static meta-refresh stub pointing at its
-`Location`, so public canonical redirects work on any host. The stub turns the target into a
-link, so only http(s) and site-relative targets are written; anything else fails the page.
-Because of this, don't prerender authenticated routes: an unauthenticated generation request
-would capture their login redirect. Any other non-2xx response fails the page (so bugs and
-stale data surface).
+With `clean_urls: true`, HTML pages are written as `<path>/index.html` instead, which every
+server resolves out of the box, so the rewrite rules below become unnecessary. Other formats,
+and paths that already end in their extension, are written as plain files either way.
 
-If you set `clean_urls: true`, pages are written as `<path>/index.html` instead, and every
-server serves clean URLs out of the box, so the rewrite rules below become unnecessary.
+A route returning a redirect (3xx) is written as a meta-refresh stub pointing at its
+`Location`, so canonical redirects work on any host. Only http(s) and site-relative targets
+are written; anything else fails the page, as does any other non-2xx response. Because of the
+redirect handling, don't prerender authenticated routes: an unauthenticated generation request
+would capture their login redirect.
+
+For a custom error page, prerender a `/404.html` route returning a 200 response with your
+error markup (the server sets the actual status). Giving the route the `.html` extension keeps
+it a file rather than a directory under `clean_urls`, which is what the configurations below,
+GitHub Pages and Cloudflare Pages all look for.
 
 ### Caddy
 
@@ -225,96 +205,35 @@ RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.html -f
 RewriteRule ^ %{REQUEST_URI}.html [L]
 ```
 
-### GitHub Pages
+### GitHub Pages and Cloudflare Pages
 
-GitHub Pages already serves `foo.html` at `/foo`, `index.html` for directories, and
-`404.html` for missing pages, so no rewrite rules are needed. Add an empty `.nojekyll` file to
-the output so the files are served verbatim, then publish the generated directory (build
-steps depend on your app):
+Both already serve `foo.html` at `/foo`, `index.html` for directories and `404.html` for
+missing pages, so no configuration is needed. On GitHub Pages, add an empty `.nojekyll` file
+so the output is served verbatim:
 
 ```yaml
-# .github/workflows/deploy.yml (inside a job with pages: write + id-token: write)
+# .github/workflows/deploy.yml (in a job with pages: write + id-token: write)
 - run: bin/console static-site:generate --env=prod
 - run: touch build/.nojekyll
-- uses: actions/upload-pages-artifact@v3
+- uses: actions/upload-pages-artifact@v5
   with:
       path: build
-- uses: actions/deploy-pages@v4
+- uses: actions/deploy-pages@v5
 ```
 
-### Cloudflare Pages
-
-Cloudflare Pages also serves `foo.html` at `/foo`, `index.html` for directories, and
-`404.html` automatically, so no rewrite rules are needed. Deploy the generated directory
-directly, or point a Git integration's output directory at it:
-
-```bash
-npx wrangler pages deploy build --project-name my-site
-```
-
-Optional `_redirects` and `_headers` files placed in the output are honoured.
-
-## Custom renderer or dumper
-
-Each moving part is a service with a `bakslash_static_site.`-prefixed id behind an
-interface. To swap an implementation, redefine the service id in your application
-configuration (which wins over the bundle's definition) with a class implementing
-the relevant interface:
-
-```yaml
-# config/services.yaml
-services:
-    # implements Bakslash\StaticSiteBundle\Dumper\DumperInterface
-    bakslash_static_site.dumper:
-        class: App\StaticSite\MyDumper
-        arguments: [...]
-
-    # implements Bakslash\StaticSiteBundle\Renderer\RendererInterface
-    bakslash_static_site.renderer:
-        class: App\StaticSite\MyRenderer
-        arguments: [...]
-```
-
-Overridable ids: `bakslash_static_site.renderer`, `bakslash_static_site.dumper`,
-`bakslash_static_site.filesystem`, `bakslash_static_site.uri_provider`. Minification runs as
-a `PageRenderedEvent` listener (see [Events](#events)), so it applies to whatever the
-renderer produces, including a custom one.
-
-### Storage backend
-
-Pages are written through [Flysystem](https://flysystem.thephpleague.com/). The `storage`
-option decides where: a local directory path (the default), or a reference to a Flysystem
-operator service you configured yourself, e.g. with
-[`league/flysystem-bundle`](https://github.com/thephpleague/flysystem-bundle):
-
-```yaml
-bakslash_static_site:
-    # write to an S3 bucket via a preconfigured Flysystem service (note the @ and quotes)
-    storage: '@flysystem.storage.static_site'
-```
-
-Both forms wire the same `bakslash_static_site.filesystem` service. For full control, you
-can override `bakslash_static_site.dumper` with your own `DumperInterface` implementation
-instead.
-
-## Minification (optional)
-
-Set `minify: true` to minify generated HTML and XML pages. This requires
-[`sensiolabs/minify-bundle`](https://github.com/sensiolabs/minify-bundle) to be
-installed and enabled; if it isn't, the container build fails with a clear error.
+On Cloudflare Pages, deploy the directory with `npx wrangler pages deploy build`, or point a
+Git integration's output directory at it. `_redirects` and `_headers` files placed in the
+output are honoured.
 
 ## Events
 
-The generator dispatches events during a run, so you can hook in with a normal listener or
-subscriber:
+Hook into a run with a normal listener or subscriber:
 
 | Event | When | Typical use |
 | --- | --- | --- |
-| `Event\PageRenderedEvent` | after a page renders, before it is written | transform the page (`$event->setPage(...)`) |
-| `Event\PageDumpedEvent` | after a page is written | collect the generated URIs (e.g. a build manifest) |
-| `Event\PageFailedEvent` | a page could not be generated | react to failures (log, notify); covers URI, render and write failures |
-
-For example, to rewrite links in every generated page:
+| `Event\PageRenderedEvent` | after a page renders, before it is written | transform the page with `$event->setPage(...)` |
+| `Event\PageDumpedEvent` | after a page is written | collect the generated URIs, e.g. a build manifest |
+| `Event\PageFailedEvent` | a page could not be generated | log or notify; covers URI, render and write failures |
 
 ```php
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
@@ -334,6 +253,30 @@ final class RewriteLinks
     }
 }
 ```
+
+## Replacing a moving part
+
+Each step is a service behind an interface. Redefine its id in your application configuration,
+which wins over the bundle's definition:
+
+```yaml
+# config/services.yaml
+services:
+    # implements Bakslash\StaticSiteBundle\Dumper\DumperInterface
+    bakslash_static_site.dumper:
+        class: App\StaticSite\MyDumper
+```
+
+| Service id | Interface |
+| --- | --- |
+| `bakslash_static_site.uri_provider` | `UriProvider\UriProviderInterface` |
+| `bakslash_static_site.renderer` | `Renderer\RendererInterface` |
+| `bakslash_static_site.dumper` | `Dumper\DumperInterface` |
+| `bakslash_static_site.filesystem` | Flysystem's `FilesystemOperator` |
+
+Minification runs as a `PageRenderedEvent` listener, so it applies to whatever the renderer
+produces, including a custom one. The generator driving these is internal:
+`static-site:generate` is the entry point, and the events above are how you hook into a run.
 
 ## License
 
