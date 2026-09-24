@@ -274,6 +274,11 @@ services:
 | `bakslash_static_site.dumper` | `Dumper\DumperInterface` |
 | `bakslash_static_site.filesystem` | Flysystem's `FilesystemOperator` |
 
+To fail a single page and let the run continue, throw `Exception\RenderingException` from a
+renderer or `Exception\DumpingException` from a dumper, and yield a
+`UriProvider\UriGenerationFailure` from a URI provider. Any other exception aborts the run.
+Everything the bundle throws implements `Exception\ExceptionInterface`.
+
 Minification runs as a `PageRenderedEvent` listener, so it applies to whatever the renderer
 produces, including a custom one. The generator driving these is internal:
 `static-site:generate` is the entry point, and the events above are how you hook into a run.
