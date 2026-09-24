@@ -4,6 +4,16 @@
     "type": "symfony-bundle",
     "license": "MIT",
     "keywords": ["symfony", "bundle", "static-site", "ssg", "prerender"],
+    "authors": [
+        {
+            "name": "Mathias Arlaud",
+            "email": "mathias.arlaud@gmail.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/bakslashHQ/static-site-bundle/issues",
+        "source": "https://github.com/bakslashHQ/static-site-bundle"
+    },
     "require": {
         "php": ">=8.3",
         "league/flysystem": "^3.15",
