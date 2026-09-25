@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Bakslash\StaticSiteBundle\UriProvider;
 
+use Bakslash\StaticSiteBundle\Attribute\Prerender;
 use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
-use Bakslash\StaticSiteBundle\Routing\PrerenderRouteLoader;
 use Bakslash\StaticSiteBundle\Routing\SiteContext;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Routing\Exception\InvalidParameterException;
@@ -95,7 +95,7 @@ final readonly class RouteUriProvider implements UriProviderInterface
         $routes = [];
 
         foreach ($this->router->getRouteCollection() as $routeName => $route) {
-            $config = $route->getDefaults()[PrerenderRouteLoader::ROUTE_DEFAULT] ?? null;
+            $config = $route->getDefaults()[Prerender::ROUTE_DEFAULTS_KEY] ?? null;
             if (!$config) {
                 continue;
             }

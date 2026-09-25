@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bakslash\StaticSiteBundle\Tests\Fixtures;
 
+use Bakslash\StaticSiteBundle\Attribute\Prerender;
+use Bakslash\StaticSiteBundle\Tests\Fixtures\Controller\ConfiguredController;
 use Bakslash\StaticSiteBundle\Tests\Fixtures\Controller\HelloController;
 use Sensiolabs\MinifyBundle\Minifier\MinifierInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -32,10 +34,15 @@ final class GenerationKernel extends TestKernel
         $services = $container->services();
         $services->set(MinifierInterface::class, FakeMinifier::class);
         $services->set(HelloController::class)->tag('controller.service_arguments');
+        $services->set(ConfiguredController::class)->tag('controller.service_arguments');
     }
 
     protected function configureRoutes(RoutingConfigurator $routes): void
     {
         $routes->import(HelloController::class, 'attribute');
+
+        $routes->add('configured', '/configured')
+            ->controller(ConfiguredController::class)
+            ->defaults([Prerender::ROUTE_DEFAULTS_KEY => true]);
     }
 }

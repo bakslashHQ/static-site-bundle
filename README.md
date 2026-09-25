@@ -39,6 +39,18 @@ final class ViewHomepage
 
 On a class, it marks every action it holds; a method-level attribute overrides it.
 
+For a controller you don't own, such as `TemplateController`, mark the route where you declare
+it instead:
+
+```php
+$routes->add('legal_notices', '/legal-notices')
+    ->controller(TemplateController::class)
+    ->defaults([
+        'template' => 'pages/legal_notices.html.twig',
+        Prerender::ROUTE_DEFAULTS_KEY => true,
+    ]);
+```
+
 ### Routes with parameters
 
 Point `#[Prerender]` at a `ParamsProviderInterface` implementation that yields one parameter

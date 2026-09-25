@@ -11,6 +11,12 @@ namespace Bakslash\StaticSiteBundle\Attribute;
 final readonly class Prerender
 {
     /**
+     * The routing configuration equivalent of this attribute:
+     * ->defaults([Prerender::ROUTE_DEFAULTS_KEY => true]).
+     */
+    public const string ROUTE_DEFAULTS_KEY = '_static_generation';
+
+    /**
      * @param string|list<array<string, mixed>>|null $params either the service id of a ParamsProviderInterface implementation or an inline list of parameter sets
      */
     public function __construct(

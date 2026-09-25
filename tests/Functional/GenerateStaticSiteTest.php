@@ -43,4 +43,15 @@ final class GenerateStaticSiteTest extends KernelTestCase
         $this->assertStringStartsWith('<!--minified-->', $content, 'page should be minified');
         $this->assertStringContainsString('Hello', $content, 'rendered content should be preserved');
     }
+
+    public function testGeneratesARouteMarkedInTheRoutingConfiguration(): void
+    {
+        $kernel = self::bootKernel();
+        \assert($kernel instanceof GenerationKernel);
+
+        $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
+
+        $this->assertSame(0, $tester->execute(['--allow-debug' => true]), $tester->getDisplay());
+        $this->assertStringContainsString('Configured', (string) file_get_contents($kernel->getOutputDir().'/configured.html'));
+    }
 }

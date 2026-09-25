@@ -14,8 +14,6 @@ use Symfony\Component\Routing\RouteCollection;
  */
 final readonly class PrerenderRouteLoader implements LoaderInterface
 {
-    public const string ROUTE_DEFAULT = '_static_generation';
-
     public function __construct(
         private LoaderInterface $inner,
     ) {
@@ -35,7 +33,7 @@ final readonly class PrerenderRouteLoader implements LoaderInterface
                 continue;
             }
 
-            if (isset($route->getDefaults()[self::ROUTE_DEFAULT])) {
+            if (isset($route->getDefaults()[Prerender::ROUTE_DEFAULTS_KEY])) {
                 continue;
             }
 
@@ -48,7 +46,7 @@ final readonly class PrerenderRouteLoader implements LoaderInterface
                 'params' => $prerender->params,
             ] : true;
             $route->addDefaults([
-                self::ROUTE_DEFAULT => $config,
+                Prerender::ROUTE_DEFAULTS_KEY => $config,
             ]);
         }
 
