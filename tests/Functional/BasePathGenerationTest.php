@@ -66,12 +66,14 @@ final class BasePathGenerationTest extends KernelTestCase
         $context = self::getContainer()->get('router.request_context');
         \assert($context instanceof RequestContext);
 
+        $before = [$context->getScheme(), $context->getHost(), $context->getBaseUrl()];
+
         // The app's own default URI, which generation must not be allowed to overwrite.
-        $this->assertSame(['http', 'localhost', ''], [$context->getScheme(), $context->getHost(), $context->getBaseUrl()]);
+        $this->assertSame(['http', 'localhost', ''], $before);
 
         (new CommandTester((new Application($kernel))->find('static-site:generate')))->execute(['--allow-debug' => true]);
 
         // Generating twice in one process must stay correct.
-        $this->assertSame(['http', 'localhost', ''], [$context->getScheme(), $context->getHost(), $context->getBaseUrl()]);
+        $this->assertSame($before, [$context->getScheme(), $context->getHost(), $context->getBaseUrl()]);
     }
 }
