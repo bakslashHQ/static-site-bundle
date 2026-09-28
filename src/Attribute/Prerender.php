@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\Attribute;
 
 /**
- * Marks a controller method, or an invokable controller class, to be prerendered into a static page.
+ * Marks a controller method, or every action of a controller class, to be prerendered into a
+ * static page. A method-level attribute overrides a class-level one.
  */
 #[\Attribute(\Attribute::TARGET_METHOD | \Attribute::TARGET_CLASS)]
 final readonly class Prerender
