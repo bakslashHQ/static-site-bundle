@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0
+## 0.1.0
 
 Initial release. Requires PHP 8.3 and Symfony 7.4 or 8.x.
 
