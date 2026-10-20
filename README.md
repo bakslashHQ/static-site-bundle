@@ -3,6 +3,8 @@
 Generate a static site by prerendering your Symfony routes into plain HTML (and other) files,
 ready to be served by any static host or CDN.
 
+Read [Introducing StaticSiteBundle](https://baksla.sh/blog/introducing-static-site-bundle) for the motivation behind it.
+
 ## Installation
 
 ```bash
