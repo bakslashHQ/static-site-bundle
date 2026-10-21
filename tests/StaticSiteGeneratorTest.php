@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Dumper\DumperInterface;
+use Bakslash\StaticSiteBundle\Event\GenerationFinishedEvent;
 use Bakslash\StaticSiteBundle\Event\PageDumpedEvent;
 use Bakslash\StaticSiteBundle\Event\PageFailedEvent;
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
@@ -143,6 +144,67 @@ final class StaticSiteGeneratorTest extends TestCase
         iterator_to_array($this->generator($provider, $renderer, $this->createStub(DumperInterface::class), $dispatcher)->generate());
 
         $this->assertSame(['/broken', 'route "x"'], $failed);
+    }
+
+    public function testDispatchesGenerationFinishedEventWithTheDumpedUris(): void
+    {
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturnCallback(static function (string $uri): RenderedPage {
+            if ('/broken' === $uri) {
+                throw new RenderingException('boom');
+            }
+
+            return new RenderedPage('content', 'html');
+        });
+
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturn(['/a', '/broken', new UriGenerationFailure('route "x"', new \RuntimeException('bad')), '/b', '/a']);
+
+        $events = [];
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(PageDumpedEvent::class, static function () use (&$events): void {
+            $events[] = 'dumped';
+        });
+        $dispatcher->addListener(GenerationFinishedEvent::class, static function (GenerationFinishedEvent $event) use (&$events): void {
+            $events[] = $event;
+        });
+
+        iterator_to_array($this->generator($provider, $renderer, $this->createStub(DumperInterface::class), $dispatcher)->generate());
+
+        $this->assertEquals(['dumped', 'dumped', new GenerationFinishedEvent(['/a', '/b'])], $events);
+    }
+
+    public function testDispatchesGenerationFinishedEventWhenNoPageIsGenerated(): void
+    {
+        $finished = null;
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(GenerationFinishedEvent::class, static function (GenerationFinishedEvent $event) use (&$finished): void {
+            $finished = $event;
+        });
+
+        iterator_to_array($this->generator($this->uriProvider([]), $this->createStub(RendererInterface::class), $this->createStub(DumperInterface::class), $dispatcher)->generate());
+
+        $this->assertEquals(new GenerationFinishedEvent([]), $finished);
+    }
+
+    public function testDoesNotDispatchGenerationFinishedEventWhenTheRunIsAborted(): void
+    {
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willThrowException(new \LogicException('unexpected'));
+
+        $finished = false;
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(GenerationFinishedEvent::class, static function () use (&$finished): void {
+            $finished = true;
+        });
+
+        try {
+            iterator_to_array($this->generator($this->uriProvider(['/a']), $renderer, $this->createStub(DumperInterface::class), $dispatcher)->generate());
+            $this->fail('The run should have been aborted.');
+        } catch (\LogicException) {
+        }
+
+        $this->assertFalse($finished);
     }
 
     public function testResetsServicesAfterEachPage(): void

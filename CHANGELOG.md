@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Dispatch `GenerationFinishedEvent` once a run completes, carrying the URIs of the written
+  pages.
+
 ## 0.1.0
 
 Initial release. Requires PHP 8.3 and Symfony 7.4 or 8.x.
