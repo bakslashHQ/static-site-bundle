@@ -140,6 +140,11 @@ bakslash_static_site:
     # Write HTML pages as "<path>/index.html" instead of "<path>.html", so any server
     # serves clean URLs without rewrite rules.
     clean_urls: false
+
+    # Write the headers that describe each page (Content-Security-Policy,
+    # Strict-Transport-Security, ...) to this file of the output, in the "_headers"
+    # format of Cloudflare Pages and Netlify. Disabled when null.
+    headers_file: null
 ```
 
 To write somewhere other than the local filesystem, point `storage` at a Flysystem operator
@@ -196,6 +201,13 @@ example.com {
     try_files {path} {path}.html {path}/index.html
     file_server
 
+    # The headers your application sends (see "Security headers" below).
+    header {
+        Content-Security-Policy "default-src 'self'"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options nosniff
+    }
+
     handle_errors {
         rewrite * /404.html
         file_server
@@ -210,6 +222,12 @@ server {
     listen 80;
     server_name example.com;
     root /var/www/site;
+
+    # The headers your application sends (see "Security headers" below). "always" also
+    # sends them with error pages.
+    add_header Content-Security-Policy "default-src 'self'" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
 
     location / {
         try_files $uri $uri.html $uri/index.html =404;
@@ -253,6 +271,56 @@ On Cloudflare Pages, deploy the directory with `npx wrangler pages deploy build`
 Git integration's output directory at it. `_redirects` and `_headers` files placed in the
 output are honoured.
 
+### Security headers
+
+A rendered page keeps every header of the response it came from, in `RenderedPage::$headers`,
+so listeners can read them. Those that describe the page itself (`Content-Security-Policy`
+and its report-only variant, `Strict-Transport-Security`, `X-Content-Type-Options`,
+`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, the three `Cross-Origin-*`
+policies, `X-Robots-Tag` and `Link`) also hold for its static copy, but a static host only
+sends them if it is told to. `Set-Cookie`, `Cache-Control`, `Vary`, `ETag` and the like
+describe one dynamic response, and are never written out.
+
+Set `headers_file` and the command writes them in the `_headers` format of Cloudflare Pages
+and Netlify:
+
+```yaml
+bakslash_static_site:
+    headers_file: '_headers'
+```
+
+```
+# Written by static-site:generate. Edit outside these lines.
+/*
+  Content-Security-Policy: default-src 'self'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+/blog
+  X-Robots-Tag: noindex
+# /about (the /* rule only)
+# End of static-site:generate.
+```
+
+Cloudflare Pages reads at most 100 rules, so what every page sends with the same value goes
+into a single `/*` rule, and a page gets a rule of its own only for what differs. The rules
+live between the two comment lines: anything written outside them is kept as it is, and a run
+filtered with `--route` or `--path` updates its pages among those already listed there.
+
+On a server you configure, set the same headers in its configuration, as in the Caddy and
+nginx examples above. GitHub Pages cannot send custom headers at all: a
+`<meta http-equiv="Content-Security-Policy">` tag in your layout is the only fallback,
+browsers ignore `frame-ancestors`, `report-uri` and `sandbox` there, and HSTS cannot be set
+that way.
+
+Two things to check before relying on the written headers:
+
+- **A nonce-based CSP is frozen at build time.** The nonce in the generated page, and in the
+  header written for it, is the one of that single render, served to every visitor: anyone can
+  read it and use it. For prerendered pages, allow inline scripts and styles by their hash
+  (`'sha256-…'`) instead.
+- **A debug kernel asks not to be indexed.** FrameworkBundle adds `X-Robots-Tag: noindex` to
+  every response when `kernel.debug` is on, so a site generated with `--allow-debug` writes it
+  too. Generate with `--env=prod`.
+
 ## Events
 
 Hook into a run with a normal listener or subscriber:
@@ -266,7 +334,6 @@ Hook into a run with a normal listener or subscriber:
 
 ```php
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
-use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]
@@ -275,9 +342,9 @@ final class RewriteLinks
     public function __invoke(PageRenderedEvent $event): void
     {
         $page = $event->getPage();
-        $event->setPage(new RenderedPage(
+        // withContent() keeps the format and the response headers of the page.
+        $event->setPage($page->withContent(
             str_replace('https://staging.example.com', 'https://example.com', $page->content),
-            $page->format,
         ));
     }
 }

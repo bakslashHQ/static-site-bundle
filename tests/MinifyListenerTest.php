@@ -24,6 +24,18 @@ final class MinifyListenerTest extends TestCase
         $this->assertSame('html', $event->getPage()->format);
     }
 
+    public function testKeepsTheHeadersOfTheMinifiedPage(): void
+    {
+        $minify = $this->createStub(MinifierInterface::class);
+        $minify->method('minify')->willReturn('<html>min</html>');
+
+        $headers = ['content-security-policy' => ["default-src 'self'"]];
+        $event = new PageRenderedEvent('/page', new RenderedPage('<html></html>', 'html', $headers));
+        (new MinifyListener($minify))($event);
+
+        $this->assertSame($headers, $event->getPage()->headers);
+    }
+
     public function testMinifiesXml(): void
     {
         $minify = $this->createMock(MinifierInterface::class);

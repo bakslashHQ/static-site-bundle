@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle;
 
 use Bakslash\StaticSiteBundle\DependencyInjection\Compiler\MinifierPass;
+use Bakslash\StaticSiteBundle\Event\GenerationFinishedEvent;
+use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
+use Bakslash\StaticSiteBundle\EventListener\HeadersFileListener;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
@@ -44,6 +47,14 @@ final class BakslashStaticSiteBundle extends AbstractBundle
                     ->defaultValue('%kernel.project_dir%/build')
                     ->cannotBeEmpty()
                 ->end()
+                ->scalarNode('headers_file')
+                    ->info('Write the headers that describe each page (Content-Security-Policy, Strict-Transport-Security, ...) to this file of the output, in the "_headers" format of Cloudflare Pages and Netlify (e.g. "_headers"). Disabled when null.')
+                    ->defaultNull()
+                    ->validate()
+                        ->ifTrue(static fn (mixed $value): bool => \is_string($value) && ('' === trim($value, '/') || str_contains($value, '..')))
+                        ->thenInvalid('The headers file must be a path inside the output, got %s.')
+                    ->end()
+                ->end()
             ->end();
     }
 
@@ -55,7 +66,7 @@ final class BakslashStaticSiteBundle extends AbstractBundle
     }
 
     /**
-     * @param array{storage: string, base_uri: string, minify: bool, clean_urls: bool} $config
+     * @param array{storage: string, base_uri: string, minify: bool, clean_urls: bool, headers_file: ?string} $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
@@ -69,6 +80,25 @@ final class BakslashStaticSiteBundle extends AbstractBundle
         $container->import('../config/services.php');
 
         $this->configureStorage($config['storage'], $builder);
+
+        if (null !== $config['headers_file']) {
+            $this->configureHeadersFile($config['headers_file'], $config['clean_urls'], $builder);
+        }
+    }
+
+    private function configureHeadersFile(string $file, bool $cleanUrls, ContainerBuilder $builder): void
+    {
+        // Collects after the other PageRenderedEvent listeners (minification runs at -256),
+        // so the headers written are those of the page as it is written.
+        $builder->register('.bakslash_static_site.headers_file_listener', HeadersFileListener::class)
+            ->setArguments([
+                new Reference('bakslash_static_site.filesystem'),
+                new Reference('.bakslash_static_site.site_context'),
+                ltrim($file, '/'),
+                $cleanUrls,
+            ])
+            ->addTag('kernel.event_listener', ['event' => PageRenderedEvent::class, 'method' => 'onPageRendered', 'priority' => -512])
+            ->addTag('kernel.event_listener', ['event' => GenerationFinishedEvent::class, 'method' => 'onGenerationFinished']);
     }
 
     private function configureStorage(string $storage, ContainerBuilder $builder): void

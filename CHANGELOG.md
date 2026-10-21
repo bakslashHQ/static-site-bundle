@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `RenderedPage::$headers` keeps every header of the response a page was rendered from;
+  `RenderedPage::withContent()` returns a copy with other content, keeping the format and
+  the headers, and the minification listener uses it (#2).
+- `headers_file` writes the headers that describe each page (`Content-Security-Policy`,
+  `Strict-Transport-Security`, ...) in the `_headers` format of Cloudflare Pages and Netlify:
+  shared headers in one `/*` rule, merged with the existing file on filtered runs (#2).
+
 ## 0.2.0
 
 - Dispatch `GenerationFinishedEvent` once a run completes, carrying the URIs of the written
