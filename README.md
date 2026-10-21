@@ -151,6 +151,10 @@ bakslash_static_site:
     storage: '@flysystem.storage.static_site'
 ```
 
+A local `storage` directory and its subdirectories are created as `0755`, so a web server
+running as another user can read them; files keep the mode your umask gives them. For other modes,
+reference a Flysystem operator you configured with your own `PortableVisibilityConverter`.
+
 ## Serving the generated site
 
 Pages are written as `<path>.<format>`, where the format comes from the route's `_format`, or

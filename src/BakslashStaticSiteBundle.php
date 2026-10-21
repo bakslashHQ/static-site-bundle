@@ -8,6 +8,8 @@ use Bakslash\StaticSiteBundle\DependencyInjection\Compiler\MinifierPass;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
+use League\Flysystem\UnixVisibility\PortableVisibilityConverter;
+use League\Flysystem\Visibility;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -76,7 +78,11 @@ final class BakslashStaticSiteBundle extends AbstractBundle
             return;
         }
 
+        $visibility = new Definition(PortableVisibilityConverter::class, [
+            '$defaultForDirectories' => Visibility::PUBLIC,
+        ]);
+
         $builder->register('bakslash_static_site.filesystem', Filesystem::class)
-            ->addArgument(new Definition(LocalFilesystemAdapter::class, [$storage]));
+            ->addArgument(new Definition(LocalFilesystemAdapter::class, [$storage, $visibility]));
     }
 }

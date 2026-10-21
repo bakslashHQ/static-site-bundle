@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Create the directories of a local `storage` as `0755` instead of Flysystem's default
+  `0700`, so a web server running as another user can read the generated site (#3).
+
 ## 0.1.0
 
 Initial release. Requires PHP 8.3 and Symfony 7.4 or 8.x.
