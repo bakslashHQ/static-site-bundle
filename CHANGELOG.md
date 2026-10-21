@@ -7,7 +7,7 @@
 - Create the directories of a local `storage` as `0755` (before the umask) instead of Flysystem's
   default `0700`, so a web server running as another user can read the generated site. Existing
   directories keep their mode: remove them, or run `chmod -R u=rwX,go=rX` on them once (#3).
-- Redefine the `bakslash_static_site.filesystem.visibility` service to change the modes of a
+- Add a `bakslash_static_site.filesystem.visibility` service, to redefine for other modes of a
   local `storage`.
 
 ## 0.1.0
