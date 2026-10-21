@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\EventListener;
 
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
-use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use Sensiolabs\MinifyBundle\Minifier\MinifierInterface;
 use Sensiolabs\MinifyBundle\Minifier\Options\HtmlOptions;
 
@@ -42,6 +41,6 @@ final readonly class MinifyListener
         // does not (yet) declare the "xml" type nor the third $options argument.
         $content = $this->minify->minify($page->content, $type, $options); // @phpstan-ignore argument.type, arguments.count
 
-        $event->setPage(new RenderedPage($content, $page->format));
+        $event->setPage($page->withContent($content));
     }
 }

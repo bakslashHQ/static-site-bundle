@@ -67,7 +67,28 @@ final readonly class PageRenderer implements RendererInterface
             ?? ($contentType ? $request->getFormat($contentType) : null)
             ?? 'html';
 
-        return new RenderedPage($content, $format);
+        return new RenderedPage($content, $format, $this->headers($response));
+    }
+
+    /**
+     * Every header of the response, so listeners can read the ones they need (X-Robots-Tag,
+     * Link, the security headers, ...). Which of them describe the static page is decided
+     * where they are written out.
+     *
+     * @return array<string, list<string>>
+     */
+    private function headers(Response $response): array
+    {
+        $headers = [];
+
+        foreach ($response->headers->all() as $name => $values) {
+            $values = array_values(array_filter($values, static fn (?string $value): bool => null !== $value));
+            if ([] !== $values) {
+                $headers[$name] = $values;
+            }
+        }
+
+        return $headers;
     }
 
     private function redirectStub(string $location): string
