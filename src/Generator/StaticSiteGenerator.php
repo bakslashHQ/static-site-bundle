@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle\Generator;
 
 use Bakslash\StaticSiteBundle\Dumper\DumperInterface;
+use Bakslash\StaticSiteBundle\Event\GenerationFinishedEvent;
 use Bakslash\StaticSiteBundle\Event\PageDumpedEvent;
 use Bakslash\StaticSiteBundle\Event\PageFailedEvent;
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
@@ -37,6 +38,7 @@ final readonly class StaticSiteGenerator
     public function generate(GenerationFilter $filter = new GenerationFilter()): iterable
     {
         $seen = [];
+        $dumped = [];
 
         foreach ($this->uriProvider->provide($filter) as $item) {
             if ($item instanceof UriGenerationFailure) {
@@ -60,6 +62,7 @@ final readonly class StaticSiteGenerator
 
                 $this->dumper->dump($item, $event->getPage());
                 $this->eventDispatcher->dispatch(new PageDumpedEvent($item));
+                $dumped[] = $item;
 
                 $result = GenerationResult::success($item);
             } catch (RenderingException|DumpingException $exception) {
@@ -72,5 +75,7 @@ final readonly class StaticSiteGenerator
 
             yield $result;
         }
+
+        $this->eventDispatcher->dispatch(new GenerationFinishedEvent($dumped));
     }
 }

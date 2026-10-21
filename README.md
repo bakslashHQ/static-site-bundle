@@ -262,6 +262,7 @@ Hook into a run with a normal listener or subscriber:
 | `Event\PageRenderedEvent` | after a page renders, before it is written | transform the page with `$event->setPage(...)` |
 | `Event\PageDumpedEvent` | after a page is written | collect the generated URIs, e.g. a build manifest |
 | `Event\PageFailedEvent` | a page could not be generated | log or notify; covers URI, render and write failures |
+| `Event\GenerationFinishedEvent` | once every page has been processed, even when some failed; not on an aborted run | write a sitemap from `$event->uris`, which leaves out failed pages and, with `--route`/`--path`, the pages outside them |
 
 ```php
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
