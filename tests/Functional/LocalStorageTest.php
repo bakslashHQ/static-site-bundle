@@ -10,11 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Filesystem\Filesystem;
 
-/**
- * Exercises a local storage: modes of nested clean-URL directories, with the bundle's visibility
- * converter or a redefined one (in the "custom_visibility" environment).
- */
-final class LocalStorageKernel extends TestKernel
+final class LocalStorageTest extends KernelTestCase
 {
     protected static function getKernelClass(): string
     {

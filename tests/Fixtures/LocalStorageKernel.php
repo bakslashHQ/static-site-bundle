@@ -10,6 +10,10 @@ use League\Flysystem\Visibility;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 
+/**
+ * Exercises a local storage: modes of nested clean-URL directories, with the bundle's visibility
+ * converter or a redefined one (in the "custom_visibility" environment).
+ */
 final class LocalStorageKernel extends TestKernel
 {
     public const CUSTOM_VISIBILITY_ENV = 'custom_visibility';
