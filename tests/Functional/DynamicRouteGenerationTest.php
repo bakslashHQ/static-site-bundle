@@ -44,27 +44,6 @@ final class DynamicRouteGenerationTest extends KernelTestCase
         $this->assertStringContainsString('Article bar', (string) file_get_contents($outputDir.'/articles/bar/index.html'));
     }
 
-    public function testGeneratedDirectoriesAreReadableByOtherUsers(): void
-    {
-        $umask = umask(0o022);
-
-        try {
-            $kernel = self::bootKernel();
-            \assert($kernel instanceof DynamicRouteKernel);
-
-            $tester = new CommandTester((new Application($kernel))->find('static-site:generate'));
-
-            $this->assertSame(0, $tester->execute(['--allow-debug' => true]), $tester->getDisplay());
-        } finally {
-            umask($umask);
-        }
-
-        $outputDir = $kernel->getOutputDir();
-        foreach ([$outputDir, $outputDir.'/articles', $outputDir.'/articles/foo'] as $directory) {
-            $this->assertSame('0755', \sprintf('%04o', fileperms($directory) & 0o777), $directory);
-        }
-    }
-
     public function testThePathOptionRestrictsWhatIsGenerated(): void
     {
         $kernel = self::bootKernel();

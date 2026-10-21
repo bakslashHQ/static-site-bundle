@@ -14,6 +14,7 @@ use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
 final class BakslashStaticSiteBundle extends AbstractBundle
@@ -78,11 +79,10 @@ final class BakslashStaticSiteBundle extends AbstractBundle
             return;
         }
 
-        $visibility = new Definition(PortableVisibilityConverter::class, [
-            '$defaultForDirectories' => Visibility::PUBLIC,
-        ]);
+        $builder->register('bakslash_static_site.filesystem.visibility', PortableVisibilityConverter::class)
+            ->setArgument('$defaultForDirectories', Visibility::PUBLIC);
 
         $builder->register('bakslash_static_site.filesystem', Filesystem::class)
-            ->addArgument(new Definition(LocalFilesystemAdapter::class, [$storage, $visibility]));
+            ->addArgument(new Definition(LocalFilesystemAdapter::class, [$storage, new Reference('bakslash_static_site.filesystem.visibility')]));
     }
 }
