@@ -151,6 +151,20 @@ bakslash_static_site:
     storage: '@flysystem.storage.static_site'
 ```
 
+A local `storage` directory and its subdirectories are created as `0755` (before the umask is
+applied), so a web server running as another user can read them. For other modes, redefine the
+`bakslash_static_site.filesystem.visibility` service:
+
+```yaml
+# config/services.yaml
+services:
+    bakslash_static_site.filesystem.visibility:
+        class: League\Flysystem\UnixVisibility\PortableVisibilityConverter
+        arguments:
+            $directoryPublic: 0o775
+            $defaultForDirectories: public
+```
+
 ## Serving the generated site
 
 Pages are written as `<path>.<format>`, where the format comes from the route's `_format`, or
@@ -288,6 +302,7 @@ services:
 | `bakslash_static_site.renderer` | `Renderer\RendererInterface` |
 | `bakslash_static_site.dumper` | `Dumper\DumperInterface` |
 | `bakslash_static_site.filesystem` | Flysystem's `FilesystemOperator` |
+| `bakslash_static_site.filesystem.visibility` | Flysystem's `UnixVisibility\VisibilityConverter` (local `storage` only) |
 
 To fail a single page and let the run continue, throw `Exception\RenderingException` from a
 renderer or `Exception\DumpingException` from a dumper, and yield a
