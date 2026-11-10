@@ -20,6 +20,11 @@ final readonly class GenerationFilter
     ) {
     }
 
+    public function isEmpty(): bool
+    {
+        return [] === $this->routes && [] === $this->paths;
+    }
+
     public function matchesRoute(string $routeName, ?string $canonicalName = null): bool
     {
         return $this->matches($this->routes, $routeName)

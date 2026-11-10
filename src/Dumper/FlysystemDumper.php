@@ -22,14 +22,7 @@ final readonly class FlysystemDumper implements DumperInterface
 
     public function dump(string $uri, RenderedPage $page): void
     {
-        $format = $page->format;
-
-        $path = ltrim(match (true) {
-            str_ends_with($uri, '/') => $uri.'index.'.$format,
-            str_ends_with($uri, '.'.$format) => $uri,
-            'html' === $format && $this->cleanUrls => trim($uri, '/').'/index.html',
-            default => $uri.'.'.$format,
-        }, '/');
+        $path = PagePath::written($uri, $page->format, $this->cleanUrls);
 
         try {
             $this->filesystem->write($path, $page->content);
