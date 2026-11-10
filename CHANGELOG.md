@@ -20,6 +20,10 @@
   `RenderedPage::withContent()` (#2).
 - Add a `headers_file` option, writing the page headers in the `_headers` format of
   Cloudflare Pages and Netlify (#2).
+- Resolve every URI before rendering the first page. The reset between pages put the router
+  context back to the application's, so the URIs that followed were generated against its host,
+  scheme and base path instead of the site's. A misconfigured route now aborts the run before
+  any page is written.
 
 ## 0.1.0
 

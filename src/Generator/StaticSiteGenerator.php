@@ -40,7 +40,11 @@ final readonly class StaticSiteGenerator
         $seen = [];
         $dumped = [];
 
-        foreach ($this->uriProvider->provide($filter) as $item) {
+        // Resolved before the first page: rendering and the reset between pages both rewrite the
+        // router context the URIs are generated against.
+        $items = iterator_to_array($this->uriProvider->provide($filter), false);
+
+        foreach ($items as $item) {
             if ($item instanceof UriGenerationFailure) {
                 $this->eventDispatcher->dispatch(new PageFailedEvent($item->identifier, $item->error));
 

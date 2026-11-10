@@ -9,6 +9,7 @@ use Bakslash\StaticSiteBundle\Event\GenerationFinishedEvent;
 use Bakslash\StaticSiteBundle\Event\PageDumpedEvent;
 use Bakslash\StaticSiteBundle\Event\PageFailedEvent;
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
+use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
@@ -37,6 +38,51 @@ final class StaticSiteGeneratorTest extends TestCase
         $this->assertSame('/a', $results[0]->uri);
         $this->assertNull($results[0]->error);
         $this->assertNull($results[1]->error);
+    }
+
+    public function testResolvesEveryUriBeforeRenderingAnyPage(): void
+    {
+        $resolved = [];
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturnCallback(static function () use (&$resolved): \Generator {
+            foreach (['/a', '/b'] as $uri) {
+                $resolved[] = $uri;
+
+                yield $uri;
+            }
+        });
+
+        $resolvedAtRender = [];
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturnCallback(static function () use (&$resolved, &$resolvedAtRender): RenderedPage {
+            $resolvedAtRender[] = $resolved;
+
+            return new RenderedPage('content', 'html');
+        });
+
+        iterator_to_array($this->generator($provider, $renderer, $this->createStub(DumperInterface::class))->generate());
+
+        $this->assertSame([['/a', '/b'], ['/a', '/b']], $resolvedAtRender);
+    }
+
+    public function testAbortsBeforeWritingAnyPageWhenTheUriProviderFails(): void
+    {
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturnCallback(static function (): \Generator {
+            yield '/a';
+
+            throw new InvalidConfigurationException('boom');
+        });
+
+        $renderer = $this->createMock(RendererInterface::class);
+        $renderer->expects($this->never())->method('render');
+
+        $dumper = $this->createMock(DumperInterface::class);
+        $dumper->expects($this->never())->method('dump');
+
+        $this->expectException(InvalidConfigurationException::class);
+
+        iterator_to_array($this->generator($provider, $renderer, $dumper)->generate());
     }
 
     public function testGeneratesEachUriOnlyOnce(): void

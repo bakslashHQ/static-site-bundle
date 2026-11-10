@@ -18,6 +18,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 #[AsCommand(name: 'static-site:generate', description: 'Generates static pages')]
 final readonly class GenerateStaticSiteCommand
 {
+    private const string PROGRESS_FORMAT = ' <info>%current%</info> pages generated (%elapsed%)';
+
     public function __construct(
         private StaticSiteGenerator $generator,
         private bool $debug,
@@ -47,11 +49,16 @@ final readonly class GenerateStaticSiteCommand
         $failed = 0;
 
         $progress = !$io->isVerbose() && $io->isDecorated() ? $io->createProgressBar() : null;
-        $progress?->setFormat(' <info>%current%</info> pages generated (%elapsed%)');
+        // No elapsed time: nothing redraws the bar while the URIs are resolved.
+        $progress?->setFormat(' Resolving the pages to generate...');
         $progress?->start();
 
         try {
             foreach ($this->generator->generate(new GenerationFilter($route, $path)) as $result) {
+                if (0 === $generated + $failed) {
+                    $progress?->setFormat(self::PROGRESS_FORMAT);
+                }
+
                 if (null === $result->error) {
                     ++$generated;
                     $io->writeln(\sprintf(' <info>✓</info> %s', $result->uri), OutputInterface::VERBOSITY_VERBOSE);
@@ -66,6 +73,7 @@ final readonly class GenerateStaticSiteCommand
             }
         } finally {
             if (null !== $progress) {
+                $progress->setFormat(self::PROGRESS_FORMAT);
                 $progress->finish();
                 $io->newLine(2);
             }
