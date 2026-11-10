@@ -80,6 +80,6 @@ final readonly class StaticSiteGenerator
             yield $result;
         }
 
-        $this->eventDispatcher->dispatch(new GenerationFinishedEvent($dumped));
+        $this->eventDispatcher->dispatch(new GenerationFinishedEvent($dumped, !$filter->isEmpty()));
     }
 }

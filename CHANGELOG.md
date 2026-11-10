@@ -3,7 +3,7 @@
 ## 0.2.0
 
 - Dispatch `GenerationFinishedEvent` once a run completes, carrying the URIs of the written
-  pages.
+  pages and whether the run was filtered.
 - Create the directories of a local `storage` as `0755` (before the umask) instead of Flysystem's
   default `0700`, so a web server running as another user can read the generated site. Existing
   directories keep their mode: remove them, or run `chmod -R u=rwX,go=rX` on them once (#3).
@@ -16,6 +16,10 @@
   per-locale parameters such as translated slugs. Requires the translator to be enabled.
 - Match `--route` against the canonical name of a localized route, so `--route=article`
   selects every locale variant of `article`.
+- Keep the response headers of a rendered page in `RenderedPage::$headers`, and add
+  `RenderedPage::withContent()` (#2).
+- Add a `headers_file` option, writing the page headers in the `_headers` format of
+  Cloudflare Pages and Netlify (#2).
 - Resolve every URI before rendering the first page. The reset between pages put the router
   context back to the application's, so the URIs that followed were generated against its host,
   scheme and base path instead of the site's. A misconfigured route now aborts the run before

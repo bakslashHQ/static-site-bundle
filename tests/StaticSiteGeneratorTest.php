@@ -14,6 +14,7 @@ use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use Bakslash\StaticSiteBundle\Renderer\RendererInterface;
+use Bakslash\StaticSiteBundle\UriProvider\GenerationFilter;
 use Bakslash\StaticSiteBundle\UriProvider\UriGenerationFailure;
 use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
 use PHPUnit\Framework\TestCase;
@@ -231,6 +232,19 @@ final class StaticSiteGeneratorTest extends TestCase
         iterator_to_array($this->generator($this->uriProvider([]), $this->createStub(RendererInterface::class), $this->createStub(DumperInterface::class), $dispatcher)->generate());
 
         $this->assertEquals(new GenerationFinishedEvent([]), $finished);
+    }
+
+    public function testFlagsAFilteredRunAsPartial(): void
+    {
+        $finished = null;
+        $dispatcher = new EventDispatcher();
+        $dispatcher->addListener(GenerationFinishedEvent::class, static function (GenerationFinishedEvent $event) use (&$finished): void {
+            $finished = $event;
+        });
+
+        iterator_to_array($this->generator($this->uriProvider([]), $this->createStub(RendererInterface::class), $this->createStub(DumperInterface::class), $dispatcher)->generate(new GenerationFilter(paths: ['/blog/*'])));
+
+        $this->assertEquals(new GenerationFinishedEvent([], partial: true), $finished);
     }
 
     public function testDoesNotDispatchGenerationFinishedEventWhenTheRunIsAborted(): void
