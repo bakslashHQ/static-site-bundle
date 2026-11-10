@@ -11,10 +11,12 @@ namespace Bakslash\StaticSiteBundle\Event;
 final class GenerationFinishedEvent
 {
     /**
-     * @param list<string> $uris the URIs of the pages written during this run
+     * @param list<string> $uris    the URIs of the pages written during this run
+     * @param bool         $partial whether the run was filtered with --route or --path
      */
     public function __construct(
         public readonly array $uris,
+        public readonly bool $partial = false,
     ) {
     }
 }

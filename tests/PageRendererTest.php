@@ -172,6 +172,34 @@ final class PageRendererTest extends TestCase
         $this->renderer($kernel)->render('/foo');
     }
 
+    public function testKeepsEveryHeaderOfTheResponse(): void
+    {
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('ok', headers: [
+            'Content-Security-Policy' => "default-src 'self'",
+            'X-Robots-Tag' => 'noindex',
+            'Link' => ['</a.css>; rel=preload', '</b.js>; rel=preload'],
+        ]));
+
+        $headers = $this->renderer($kernel)->render('/')->headers;
+
+        $this->assertSame(["default-src 'self'"], $headers['content-security-policy']);
+        $this->assertSame(['noindex'], $headers['x-robots-tag']);
+        $this->assertSame(['</a.css>; rel=preload', '</b.js>; rel=preload'], $headers['link']);
+        $this->assertArrayHasKey('cache-control', $headers, 'filtering is left to whoever writes them out');
+    }
+
+    public function testARedirectStubCarriesNoHeader(): void
+    {
+        $kernel = $this->createStub(HttpKernelInterface::class);
+        $kernel->method('handle')->willReturn(new Response('', Response::HTTP_MOVED_PERMANENTLY, [
+            'Location' => '/new',
+            'Content-Security-Policy' => "default-src 'self'",
+        ]));
+
+        $this->assertSame([], $this->renderer($kernel)->render('/old')->headers);
+    }
+
     private function renderer(HttpKernelInterface $kernel): PageRenderer
     {
         return new PageRenderer($kernel, new SiteContext(new RequestContext(), 'http://localhost'));

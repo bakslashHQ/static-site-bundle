@@ -153,6 +153,11 @@ bakslash_static_site:
     # Write HTML pages as "<path>/index.html" instead of "<path>.html", so any server
     # serves clean URLs without rewrite rules.
     clean_urls: false
+
+    # Write the headers that describe each page (Content-Security-Policy,
+    # Strict-Transport-Security, ...) to this file of the output, in the "_headers"
+    # format of Cloudflare Pages and Netlify. Disabled when null.
+    headers_file: null
 ```
 
 To write somewhere other than the local filesystem, point `storage` at a Flysystem operator
@@ -214,6 +219,13 @@ example.com {
     try_files {path} {path}.html {path}/index.html
     file_server
 
+    # The headers your application sends (see "Security headers" below).
+    header {
+        Content-Security-Policy "default-src 'self'"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options nosniff
+    }
+
     handle_errors {
         rewrite * /404.html
         file_server
@@ -228,6 +240,12 @@ server {
     listen 80;
     server_name example.com;
     root /var/www/site;
+
+    # The headers your application sends (see "Security headers" below). "always" also
+    # sends them with error pages.
+    add_header Content-Security-Policy "default-src 'self'" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
 
     location / {
         try_files $uri $uri.html $uri/index.html =404;
@@ -271,6 +289,36 @@ On Cloudflare Pages, deploy the directory with `npx wrangler pages deploy build`
 Git integration's output directory at it. `_redirects` and `_headers` files placed in the
 output are honoured.
 
+### Security headers
+
+Set `headers_file` to write the headers that describe each page (`Content-Security-Policy`,
+`Strict-Transport-Security`, `X-Robots-Tag`, `Link`, ...) in the `_headers` format of
+Cloudflare Pages and Netlify:
+
+```yaml
+bakslash_static_site:
+    headers_file: '_headers'
+```
+
+```
+# Written by static-site:generate. Edit outside these lines.
+/*
+  Content-Security-Policy: default-src 'self'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+/blog
+  X-Robots-Tag: noindex
+# End of static-site:generate.
+```
+
+The rules are rewritten on each full run, and left untouched by a run filtered with
+`--route` or `--path`. Anything written outside the two comment lines is kept.
+The shared `/*` rule also covers your assets. Don't repeat its headers in hand-written rules:
+Cloudflare Pages joins the values of a header set by several matching rules, and Netlify keeps
+only one of them.
+
+A nonce-based CSP is frozen at build time: every visitor gets the nonce of that single render.
+Allow inline scripts and styles by their hash (`'sha256-…'`) instead.
+
 ## Events
 
 Hook into a run with a normal listener or subscriber:
@@ -280,11 +328,10 @@ Hook into a run with a normal listener or subscriber:
 | `Event\PageRenderedEvent` | after a page renders, before it is written | transform the page with `$event->setPage(...)` |
 | `Event\PageDumpedEvent` | after a page is written | collect the generated URIs, e.g. a build manifest |
 | `Event\PageFailedEvent` | a page could not be generated | log or notify; covers URI, render and write failures |
-| `Event\GenerationFinishedEvent` | once every page has been processed, even when some failed; not on an aborted run | write a sitemap from `$event->uris`, which leaves out failed pages and, with `--route`/`--path`, the pages outside them |
+| `Event\GenerationFinishedEvent` | once every page has been processed, even when some failed; not on an aborted run | write a sitemap from `$event->uris`, which leaves out failed pages; `$event->partial` tells a run filtered with `--route`/`--path` |
 
 ```php
 use Bakslash\StaticSiteBundle\Event\PageRenderedEvent;
-use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 #[AsEventListener]
@@ -293,9 +340,9 @@ final class RewriteLinks
     public function __invoke(PageRenderedEvent $event): void
     {
         $page = $event->getPage();
-        $event->setPage(new RenderedPage(
+        // withContent() keeps the format and the response headers of the page.
+        $event->setPage($page->withContent(
             str_replace('https://staging.example.com', 'https://example.com', $page->content),
-            $page->format,
         ));
     }
 }

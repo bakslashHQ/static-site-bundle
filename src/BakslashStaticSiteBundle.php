@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bakslash\StaticSiteBundle;
 
 use Bakslash\StaticSiteBundle\DependencyInjection\Compiler\MinifierPass;
+use Bakslash\StaticSiteBundle\Dumper\HeadersFileDumper;
+use Bakslash\StaticSiteBundle\Event\GenerationFinishedEvent;
 use Bakslash\StaticSiteBundle\ParamsProvider\ParamsProviderInterface;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Local\LocalFilesystemAdapter;
@@ -12,6 +14,7 @@ use League\Flysystem\UnixVisibility\PortableVisibilityConverter;
 use League\Flysystem\Visibility;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
@@ -44,6 +47,10 @@ final class BakslashStaticSiteBundle extends AbstractBundle
                     ->defaultValue('%kernel.project_dir%/build')
                     ->cannotBeEmpty()
                 ->end()
+                ->scalarNode('headers_file')
+                    ->info('Write the headers that describe each page to this file of the output, in the "_headers" format of Cloudflare Pages and Netlify (e.g. "_headers"). Disabled when null.')
+                    ->defaultNull()
+                ->end()
             ->end();
     }
 
@@ -55,7 +62,7 @@ final class BakslashStaticSiteBundle extends AbstractBundle
     }
 
     /**
-     * @param array{storage: string, base_uri: string, minify: bool, clean_urls: bool} $config
+     * @param array{storage: string, base_uri: string, minify: bool, clean_urls: bool, headers_file: ?string} $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
@@ -69,6 +76,26 @@ final class BakslashStaticSiteBundle extends AbstractBundle
         $container->import('../config/services.php');
 
         $this->configureStorage($config['storage'], $builder);
+
+        if (null !== $config['headers_file']) {
+            $this->configureHeadersFile($config['headers_file'], $builder);
+        }
+    }
+
+    private function configureHeadersFile(string $file, ContainerBuilder $builder): void
+    {
+        // Decorating the dumper records each page as it is written, after every listener. The
+        // file is written before the other finish listeners, which may deploy the output.
+        $builder->register('.bakslash_static_site.dumper.headers_file', HeadersFileDumper::class)
+            ->setDecoratedService('bakslash_static_site.dumper')
+            ->setArguments([
+                new Reference('.inner'),
+                new Reference('bakslash_static_site.filesystem'),
+                $file,
+                '%bakslash_static_site.clean_urls%',
+                new Reference('logger', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+            ])
+            ->addTag('kernel.event_listener', ['event' => GenerationFinishedEvent::class, 'method' => 'onGenerationFinished', 'priority' => 256]);
     }
 
     private function configureStorage(string $storage, ContainerBuilder $builder): void

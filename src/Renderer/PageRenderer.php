@@ -67,7 +67,7 @@ final readonly class PageRenderer implements RendererInterface
             ?? ($contentType ? $request->getFormat($contentType) : null)
             ?? 'html';
 
-        return new RenderedPage($content, $format);
+        return new RenderedPage($content, $format, $response->headers->all());
     }
 
     private function redirectStub(string $location): string
