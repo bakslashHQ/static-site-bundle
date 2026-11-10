@@ -49,8 +49,7 @@ final readonly class GenerateStaticSiteCommand
         $failed = 0;
 
         $progress = !$io->isVerbose() && $io->isDecorated() ? $io->createProgressBar() : null;
-        // Shown until the first page is done: every URI is resolved before it, which can take a while
-        // with slow params providers. No elapsed time, as nothing redraws the bar in the meantime.
+        // No elapsed time: nothing redraws the bar while the URIs are resolved.
         $progress?->setFormat(' Resolving the pages to generate...');
         $progress?->start();
 
@@ -74,7 +73,6 @@ final readonly class GenerateStaticSiteCommand
             }
         } finally {
             if (null !== $progress) {
-                // Also when no page was generated, so the resolving message does not linger.
                 $progress->setFormat(self::PROGRESS_FORMAT);
                 $progress->finish();
                 $io->newLine(2);

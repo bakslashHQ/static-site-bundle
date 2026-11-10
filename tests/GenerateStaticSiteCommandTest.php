@@ -97,7 +97,6 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $provider = $this->createStub(UriProviderInterface::class);
         $provider->method('provide')->willReturn(['/a', '/b', '/c']);
 
-        // Only rendering and dumping errors fail a single page; anything else aborts the run.
         $renderer = $this->createStub(RendererInterface::class);
         $renderer->method('render')->willReturnCallback(static fn (string $uri): RenderedPage => '/c' === $uri ? throw new \LogicException('boom') : new RenderedPage('content', 'html'));
 
@@ -136,7 +135,6 @@ final class GenerateStaticSiteCommandTest extends TestCase
         $resolving = strpos($display, 'Resolving the pages to generate...');
 
         $this->assertNotFalse($resolving);
-        // Even with nothing generated, the resolution message gives way to the counter.
         $this->assertGreaterThan($resolving, strrpos($display, $counter));
         $this->assertSame(1, substr_count($display, 'Resolving the pages to generate...'));
     }

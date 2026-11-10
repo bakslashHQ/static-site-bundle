@@ -373,7 +373,6 @@ final class RouteUriProviderTest extends TestCase
     public static function localizedRouteProvider(): iterable
     {
         yield 'localized route' => ['/fr/article/{slug}', true, ['/fr/article/fr'], '', ['_canonical_route' => 'article']];
-        // Rendered in its "_locale" default too, so its provider runs in it.
         yield 'fixed locale default' => ['/fr/article/{slug}', true, ['/fr/article/fr']];
         yield 'no locale switcher' => ['/fr/article/{slug}', false, ['/fr/article/en']];
         yield 'locale placeholder' => ['/{_locale}/article/{slug}', true, ['/fr/article/en']];
