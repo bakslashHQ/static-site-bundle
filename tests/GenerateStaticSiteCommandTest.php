@@ -6,7 +6,6 @@ namespace Bakslash\StaticSiteBundle\Tests;
 
 use Bakslash\StaticSiteBundle\Command\GenerateStaticSiteCommand;
 use Bakslash\StaticSiteBundle\Dumper\DumperInterface;
-use Bakslash\StaticSiteBundle\Exception\InvalidConfigurationException;
 use Bakslash\StaticSiteBundle\Exception\RenderingException;
 use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
@@ -95,15 +94,11 @@ final class GenerateStaticSiteCommandTest extends TestCase
     public function testFinishesTheProgressBarWhenTheRunAborts(): void
     {
         $provider = $this->createStub(UriProviderInterface::class);
-        $provider->method('provide')->willReturnCallback(static function (): \Generator {
-            yield '/a';
-            yield '/b';
+        $provider->method('provide')->willReturn(['/a', '/b', '/c']);
 
-            throw new InvalidConfigurationException('boom');
-        });
-
+        // Only rendering and dumping errors fail a single page; anything else aborts the run.
         $renderer = $this->createStub(RendererInterface::class);
-        $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
+        $renderer->method('render')->willReturnCallback(static fn (string $uri): RenderedPage => '/c' === $uri ? throw new \LogicException('boom') : new RenderedPage('content', 'html'));
 
         $generator = new StaticSiteGenerator($provider, $renderer, $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
 
@@ -111,8 +106,8 @@ final class GenerateStaticSiteCommandTest extends TestCase
 
         try {
             (new GenerateStaticSiteCommand($generator, debug: false))->__invoke(new SymfonyStyle(new ArrayInput([]), $output));
-            $this->fail('Expected the configuration error to propagate.');
-        } catch (InvalidConfigurationException) {
+            $this->fail('Expected the error to propagate.');
+        } catch (\LogicException) {
         }
 
         // Finished on the way out, so the counter is not left stale at its starting value.

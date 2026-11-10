@@ -16,6 +16,10 @@
   per-locale parameters such as translated slugs. Requires the translator to be enabled.
 - Match `--route` against the canonical name of a localized route, so `--route=article`
   selects every locale variant of `article`.
+- Resolve every URI before rendering the first page. The reset between pages put the router
+  context back to the application's, so the URIs that followed were generated against its host,
+  scheme and base path instead of the site's. A misconfigured route now aborts the run before
+  any page is written.
 
 ## 0.1.0
 
