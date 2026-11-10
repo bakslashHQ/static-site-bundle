@@ -368,27 +368,30 @@ final class RouteUriProviderTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{0: string, 1: bool, 2: list<string>, 3?: string}>
+     * @return iterable<string, array{0: string, 1: bool, 2: list<string>, 3?: string, 4?: array<string, mixed>}>
      */
     public static function localizedRouteProvider(): iterable
     {
-        yield 'localized route' => ['/fr/article/{slug}', true, ['/fr/article/fr']];
+        yield 'localized route' => ['/fr/article/{slug}', true, ['/fr/article/fr'], '', ['_canonical_route' => 'article']];
+        // Rendered in its "_locale" default too, so its provider runs in it.
+        yield 'fixed locale default' => ['/fr/article/{slug}', true, ['/fr/article/fr']];
         yield 'no locale switcher' => ['/fr/article/{slug}', false, ['/fr/article/en']];
         yield 'locale placeholder' => ['/{_locale}/article/{slug}', true, ['/fr/article/en']];
         yield 'locale placeholder in host' => ['/article/{slug}', true, ['/article/en'], '{_locale}.example.com'];
     }
 
     /**
-     * @param list<string> $expectedUris
+     * @param list<string>         $expectedUris
+     * @param array<string, mixed> $defaults
      */
     #[DataProvider('localizedRouteProvider')]
-    public function testRunsTheParamsProviderOfALocalizedRouteInItsLocale(string $path, bool $withLocaleSwitcher, array $expectedUris, string $host = ''): void
+    public function testRunsTheParamsProviderOfALocalizedRouteInItsLocale(string $path, bool $withLocaleSwitcher, array $expectedUris, string $host = '', array $defaults = []): void
     {
         $routes = new RouteCollection();
         $routes->add('article.fr', new Route($path, [
             '_locale' => 'fr',
             '_static_generation' => ['params' => 'slugs'],
-        ], host: $host));
+        ] + $defaults, host: $host));
 
         $localeSwitcher = new LocaleSwitcher('en', []);
 
