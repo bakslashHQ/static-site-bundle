@@ -114,7 +114,8 @@ final readonly class RouteUriProvider implements UriProviderInterface
                 continue;
             }
 
-            if (!$filter->matchesRoute($routeName)) {
+            $canonicalName = $route->getDefault('_canonical_route');
+            if (!$filter->matchesRoute($routeName, \is_string($canonicalName) ? $canonicalName : null)) {
                 continue;
             }
 

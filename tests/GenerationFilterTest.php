@@ -25,6 +25,15 @@ final class GenerationFilterTest extends TestCase
         $this->assertFalse($filter->matchesRoute('shop_index'));
     }
 
+    public function testMatchesRouteByCanonicalName(): void
+    {
+        $filter = new GenerationFilter(routes: ['*blog']);
+
+        $this->assertTrue($filter->matchesRoute('blog.fr', 'blog'));
+        $this->assertFalse($filter->matchesRoute('blog.fr'));
+        $this->assertFalse($filter->matchesRoute('shop.fr', 'shop'));
+    }
+
     public function testMatchesPathByGlob(): void
     {
         $filter = new GenerationFilter(paths: ['/blog/*']);

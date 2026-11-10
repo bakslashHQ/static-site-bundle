@@ -98,6 +98,9 @@ locale. Without the translator, nothing switches the locale: every variant's pro
 the current one, so a locale-dependent provider yields the same values for all of them. A route
 with a `{_locale}` placeholder, in its path or host, serves every locale, so its provider runs as is.
 
+`--route` matches both the name of each locale variant (`article.en`, `article.fr`) and the
+name the route was declared with (`article`).
+
 ### Generating the site
 
 ```bash

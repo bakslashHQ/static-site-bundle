@@ -10,7 +10,8 @@ namespace Bakslash\StaticSiteBundle\UriProvider;
 final readonly class GenerationFilter
 {
     /**
-     * @param list<string> $routes fnmatch() patterns matched against each route name
+     * @param list<string> $routes fnmatch() patterns matched against each route name, or the
+     *                             canonical name of a localized route
      * @param list<string> $paths  fnmatch() patterns matched against each generated URI
      */
     public function __construct(
@@ -19,9 +20,10 @@ final readonly class GenerationFilter
     ) {
     }
 
-    public function matchesRoute(string $routeName): bool
+    public function matchesRoute(string $routeName, ?string $canonicalName = null): bool
     {
-        return $this->matches($this->routes, $routeName);
+        return $this->matches($this->routes, $routeName)
+            || (null !== $canonicalName && $this->matches($this->routes, $canonicalName));
     }
 
     public function matchesPath(string $uri): bool

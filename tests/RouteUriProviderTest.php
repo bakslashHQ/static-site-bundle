@@ -278,6 +278,20 @@ final class RouteUriProviderTest extends TestCase
         $this->assertSame(['/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog']))));
     }
 
+    public function testFiltersTheLocaleVariantsOfALocalizedRouteByItsCanonicalName(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('blog.en', new Route('/blog', ['_static_generation' => true, '_locale' => 'en', '_canonical_route' => 'blog']));
+        $routes->add('blog.fr', new Route('/fr/blog', ['_static_generation' => true, '_locale' => 'fr', '_canonical_route' => 'blog']));
+        $routes->add('shop', new Route('/shop', ['_static_generation' => true]));
+
+        $provider = $this->createProvider($routes);
+
+        $this->assertSame(['/blog', '/fr/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog']))));
+        $this->assertSame(['/blog', '/fr/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['*blog']))));
+        $this->assertSame(['/fr/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog.fr']))));
+    }
+
     public function testFiltersByPath(): void
     {
         $routes = new RouteCollection();
