@@ -11,6 +11,7 @@ use Bakslash\StaticSiteBundle\Generator\StaticSiteGenerator;
 use Bakslash\StaticSiteBundle\Renderer\RenderedPage;
 use Bakslash\StaticSiteBundle\Renderer\RendererInterface;
 use Bakslash\StaticSiteBundle\UriProvider\UriProviderInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -112,6 +113,63 @@ final class GenerateStaticSiteCommandTest extends TestCase
 
         // Finished on the way out, so the counter is not left stale at its starting value.
         $this->assertStringContainsString('2 pages generated', (string) preg_replace('/\e\[[\d;]*m/', '', $output->fetch()));
+    }
+
+    /**
+     * @param list<string> $uris
+     */
+    #[DataProvider('resolvedUrisProvider')]
+    public function testShowsTheResolutionThenTheCounterInTheProgressBar(array $uris, string $counter): void
+    {
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturn($uris);
+
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willReturn(new RenderedPage('content', 'html'));
+
+        $generator = new StaticSiteGenerator($provider, $renderer, $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
+
+        $output = new BufferedOutput(decorated: true);
+        (new GenerateStaticSiteCommand($generator, debug: false))->__invoke(new SymfonyStyle(new ArrayInput([]), $output));
+
+        $display = (string) preg_replace('/\e\[[\d;]*m/', '', $output->fetch());
+        $resolving = strpos($display, 'Resolving the pages to generate...');
+
+        $this->assertNotFalse($resolving);
+        // Even with nothing generated, the resolution message gives way to the counter.
+        $this->assertGreaterThan($resolving, strrpos($display, $counter));
+        $this->assertSame(1, substr_count($display, 'Resolving the pages to generate...'));
+    }
+
+    public function testRedrawsAFirstFailureWithTheCounter(): void
+    {
+        $provider = $this->createStub(UriProviderInterface::class);
+        $provider->method('provide')->willReturn(['/broken']);
+
+        $renderer = $this->createStub(RendererInterface::class);
+        $renderer->method('render')->willThrowException(new RenderingException('boom'));
+
+        $generator = new StaticSiteGenerator($provider, $renderer, $this->createStub(DumperInterface::class), new EventDispatcher(), $this->createStub(ResetInterface::class));
+
+        $output = new BufferedOutput(decorated: true);
+        (new GenerateStaticSiteCommand($generator, debug: false))->__invoke(new SymfonyStyle(new ArrayInput([]), $output));
+
+        $display = (string) preg_replace('/\e\[[\d;]*m/', '', $output->fetch());
+        $failure = strpos($display, '✗ /broken');
+
+        // Redrawn right after the failure line, which the throttled finish() alone cannot prove.
+        $this->assertNotFalse($failure);
+        $this->assertStringContainsString('0 pages generated', substr($display, $failure));
+        $this->assertStringNotContainsString('Resolving the pages to generate...', substr($display, $failure));
+    }
+
+    /**
+     * @return iterable<string, array{list<string>, string}>
+     */
+    public static function resolvedUrisProvider(): iterable
+    {
+        yield 'pages' => [['/a', '/b'], '2 pages generated'];
+        yield 'no page' => [[], '0 pages generated'];
     }
 
     /**

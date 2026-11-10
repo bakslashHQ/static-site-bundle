@@ -18,6 +18,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 #[AsCommand(name: 'static-site:generate', description: 'Generates static pages')]
 final readonly class GenerateStaticSiteCommand
 {
+    private const string PROGRESS_FORMAT = ' <info>%current%</info> pages generated (%elapsed%)';
+
     public function __construct(
         private StaticSiteGenerator $generator,
         private bool $debug,
@@ -47,11 +49,17 @@ final readonly class GenerateStaticSiteCommand
         $failed = 0;
 
         $progress = !$io->isVerbose() && $io->isDecorated() ? $io->createProgressBar() : null;
-        $progress?->setFormat(' <info>%current%</info> pages generated (%elapsed%)');
+        // Shown until the first page is done: every URI is resolved before it, which can take a while
+        // with slow params providers. No elapsed time, as nothing redraws the bar in the meantime.
+        $progress?->setFormat(' Resolving the pages to generate...');
         $progress?->start();
 
         try {
             foreach ($this->generator->generate(new GenerationFilter($route, $path)) as $result) {
+                if (0 === $generated + $failed) {
+                    $progress?->setFormat(self::PROGRESS_FORMAT);
+                }
+
                 if (null === $result->error) {
                     ++$generated;
                     $io->writeln(\sprintf(' <info>✓</info> %s', $result->uri), OutputInterface::VERBOSITY_VERBOSE);
@@ -66,6 +74,8 @@ final readonly class GenerateStaticSiteCommand
             }
         } finally {
             if (null !== $progress) {
+                // Also when no page was generated, so the resolving message does not linger.
+                $progress->setFormat(self::PROGRESS_FORMAT);
                 $progress->finish();
                 $io->newLine(2);
             }
