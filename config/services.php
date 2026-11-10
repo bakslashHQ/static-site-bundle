@@ -37,6 +37,7 @@ return static function (ContainerConfigurator $container): void {
             service('router'),
             tagged_locator(ParamsProviderInterface::TAG),
             service('.bakslash_static_site.site_context'),
+            service('translation.locale_switcher')->nullOnInvalid(),
         ]);
 
     $services->set('bakslash_static_site.renderer', PageRenderer::class)

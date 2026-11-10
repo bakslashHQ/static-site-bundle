@@ -18,6 +18,7 @@ use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\Router;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 final class RouteUriProviderTest extends TestCase
 {
@@ -353,6 +354,44 @@ final class RouteUriProviderTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{string, bool, list<string>}>
+     */
+    public static function localizedRouteProvider(): iterable
+    {
+        yield 'localized route' => ['/fr/article/{slug}', true, ['/fr/article/fr']];
+        yield 'no locale switcher' => ['/fr/article/{slug}', false, ['/fr/article/en']];
+        yield 'locale placeholder' => ['/{_locale}/article/{slug}', true, ['/fr/article/en']];
+    }
+
+    /**
+     * @param list<string> $expectedUris
+     */
+    #[DataProvider('localizedRouteProvider')]
+    public function testRunsTheParamsProviderOfALocalizedRouteInItsLocale(string $path, bool $withLocaleSwitcher, array $expectedUris): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('article.fr', new Route($path, [
+            '_locale' => 'fr',
+            '_static_generation' => ['params' => 'slugs'],
+        ]));
+
+        $localeSwitcher = new LocaleSwitcher('en', []);
+
+        $paramsProvider = $this->createStub(ParamsProviderInterface::class);
+        $paramsProvider->method('provideParameterSets')->willReturnCallback(static fn (): array => [['slug' => $localeSwitcher->getLocale()]]);
+
+        $paramsProviders = $this->createStub(ServiceLocator::class);
+        $paramsProviders->method('has')->willReturnMap([['slugs', true]]);
+        $paramsProviders->method('get')->willReturnMap([['slugs', $paramsProvider]]);
+
+        $provider = $this->createProvider($routes, $paramsProviders, localeSwitcher: $withLocaleSwitcher ? $localeSwitcher : null);
+
+        // "fr" comes from the route defaults when the path has a "{_locale}" placeholder.
+        $this->assertSame($expectedUris, iterator_to_array($provider->provide()));
+        $this->assertSame('en', $localeSwitcher->getLocale());
+    }
+
+    /**
      * @param ServiceLocator<object>|null $paramsProviders
      */
     private function createProvider(
@@ -361,6 +400,7 @@ final class RouteUriProviderTest extends TestCase
         ?RequestContext $requestContext = null,
         string $baseUri = '',
         bool $strictRequirements = true,
+        ?LocaleSwitcher $localeSwitcher = null,
     ): RouteUriProvider {
         $loader = $this->createStub(LoaderInterface::class);
         $loader->method('load')->willReturn($routes);
@@ -371,6 +411,7 @@ final class RouteUriProviderTest extends TestCase
             $router,
             $paramsProviders ?? $this->createStub(ServiceLocator::class),
             new SiteContext($router->getContext(), $baseUri),
+            $localeSwitcher,
         );
     }
 }

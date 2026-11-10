@@ -12,6 +12,8 @@
 - Report a route that targets another host or scheme than the site's as such, instead of
   failing its pages with an unrelated "No route found" rendering error. Such a route without
   parameters now aborts the run; each offending parameter set fails its own page.
+- Run the params provider of a localized route in that route's locale, so it can yield
+  per-locale parameters such as translated slugs. Requires the translator to be enabled.
 
 ## 0.1.0
 

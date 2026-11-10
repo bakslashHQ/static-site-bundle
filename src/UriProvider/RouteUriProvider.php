@@ -12,6 +12,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Routing\Exception\InvalidParameterException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
  * @internal
@@ -25,6 +26,7 @@ final readonly class RouteUriProvider implements UriProviderInterface
         private RouterInterface $router,
         private ServiceLocator $paramsProviders,
         private SiteContext $siteContext,
+        private ?LocaleSwitcher $localeSwitcher = null,
     ) {
     }
 
@@ -43,7 +45,7 @@ final readonly class RouteUriProvider implements UriProviderInterface
                     continue;
                 }
 
-                foreach ($this->getParamsList($params) as $paramSet) {
+                foreach ($this->getParamsList($routeName, $params) as $paramSet) {
                     try {
                         $uri = $this->router->generate($routeName, $paramSet, RouterInterface::ABSOLUTE_PATH);
                     } catch (MissingMandatoryParametersException|InvalidParameterException $exception) {
@@ -196,7 +198,7 @@ final readonly class RouteUriProvider implements UriProviderInterface
      *
      * @return iterable<array<string, mixed>>
      */
-    private function getParamsList(array|string $params): iterable
+    private function getParamsList(string $routeName, array|string $params): iterable
     {
         if (\is_string($params)) {
             $serviceId = $params;
@@ -210,9 +212,33 @@ final readonly class RouteUriProvider implements UriProviderInterface
             }
 
             // Drained up front: a suspended provider would be caught by the reset between pages.
-            return iterator_to_array($paramsProvider->provideParameterSets(), false);
+            $drain = static fn (): array => iterator_to_array($paramsProvider->provideParameterSets(), false);
+
+            $locale = $this->routeLocale($routeName);
+            if (null !== $this->localeSwitcher && null !== $locale) {
+                return $this->localeSwitcher->runWithLocale($locale, $drain);
+            }
+
+            return $drain();
         }
 
         return $params;
+    }
+
+    /**
+     * The locale a localized route (one path per locale) is bound to, so its params provider
+     * can run in it and yield locale-dependent values, such as translated slugs. A route with
+     * a "{_locale}" placeholder serves every locale, so it is not bound to its default one.
+     */
+    private function routeLocale(string $routeName): ?string
+    {
+        $route = $this->router->getRouteCollection()->get($routeName);
+        $locale = $route?->getDefault('_locale');
+
+        if (!\is_string($locale) || \in_array('_locale', $route->compile()->getPathVariables(), true)) {
+            return null;
+        }
+
+        return $locale;
     }
 }

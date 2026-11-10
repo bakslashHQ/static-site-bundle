@@ -88,6 +88,14 @@ public function __invoke(string $slug): Response
 Short lists can be inlined:
 `#[Prerender(params: [['slug' => 'first'], ['slug' => 'second']])]`.
 
+### Localized routes
+
+Routes localized through a path per locale (`#[Route(['en' => '/articles/{slug}', 'fr' => '/fr/articles/{slug}'])]`)
+are generated once per locale. When the translator is enabled (`symfony/translation` installed),
+each locale variant runs its params provider inside that locale (`LocaleSwitcher::runWithLocale()`),
+so the provider yields locale-dependent values, such as translated slugs, by reading the current
+locale. A route with a `{_locale}` placeholder serves every locale, so its provider runs as is.
+
 ### Generating the site
 
 ```bash
