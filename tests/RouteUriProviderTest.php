@@ -18,6 +18,7 @@ use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\Router;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 final class RouteUriProviderTest extends TestCase
 {
@@ -277,6 +278,20 @@ final class RouteUriProviderTest extends TestCase
         $this->assertSame(['/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog']))));
     }
 
+    public function testFiltersTheLocaleVariantsOfALocalizedRouteByItsCanonicalName(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('blog.en', new Route('/blog', ['_static_generation' => true, '_locale' => 'en', '_canonical_route' => 'blog']));
+        $routes->add('blog.fr', new Route('/fr/blog', ['_static_generation' => true, '_locale' => 'fr', '_canonical_route' => 'blog']));
+        $routes->add('shop', new Route('/shop', ['_static_generation' => true]));
+
+        $provider = $this->createProvider($routes);
+
+        $this->assertSame(['/blog', '/fr/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog']))));
+        $this->assertSame(['/blog', '/fr/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['*blog']))));
+        $this->assertSame(['/fr/blog'], iterator_to_array($provider->provide(new GenerationFilter(routes: ['blog.fr']))));
+    }
+
     public function testFiltersByPath(): void
     {
         $routes = new RouteCollection();
@@ -353,6 +368,45 @@ final class RouteUriProviderTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{0: string, 1: bool, 2: list<string>, 3?: string}>
+     */
+    public static function localizedRouteProvider(): iterable
+    {
+        yield 'localized route' => ['/fr/article/{slug}', true, ['/fr/article/fr']];
+        yield 'no locale switcher' => ['/fr/article/{slug}', false, ['/fr/article/en']];
+        yield 'locale placeholder' => ['/{_locale}/article/{slug}', true, ['/fr/article/en']];
+        yield 'locale placeholder in host' => ['/article/{slug}', true, ['/article/en'], '{_locale}.example.com'];
+    }
+
+    /**
+     * @param list<string> $expectedUris
+     */
+    #[DataProvider('localizedRouteProvider')]
+    public function testRunsTheParamsProviderOfALocalizedRouteInItsLocale(string $path, bool $withLocaleSwitcher, array $expectedUris, string $host = ''): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('article.fr', new Route($path, [
+            '_locale' => 'fr',
+            '_static_generation' => ['params' => 'slugs'],
+        ], host: $host));
+
+        $localeSwitcher = new LocaleSwitcher('en', []);
+
+        $paramsProvider = $this->createStub(ParamsProviderInterface::class);
+        $paramsProvider->method('provideParameterSets')->willReturnCallback(static fn (): array => [['slug' => $localeSwitcher->getLocale()]]);
+
+        $paramsProviders = $this->createStub(ServiceLocator::class);
+        $paramsProviders->method('has')->willReturnMap([['slugs', true]]);
+        $paramsProviders->method('get')->willReturnMap([['slugs', $paramsProvider]]);
+
+        $provider = $this->createProvider($routes, $paramsProviders, baseUri: 'https://fr.example.com', localeSwitcher: $withLocaleSwitcher ? $localeSwitcher : null);
+
+        // "fr" comes from the route defaults when the route has a "{_locale}" placeholder.
+        $this->assertSame($expectedUris, iterator_to_array($provider->provide()));
+        $this->assertSame('en', $localeSwitcher->getLocale());
+    }
+
+    /**
      * @param ServiceLocator<object>|null $paramsProviders
      */
     private function createProvider(
@@ -361,6 +415,7 @@ final class RouteUriProviderTest extends TestCase
         ?RequestContext $requestContext = null,
         string $baseUri = '',
         bool $strictRequirements = true,
+        ?LocaleSwitcher $localeSwitcher = null,
     ): RouteUriProvider {
         $loader = $this->createStub(LoaderInterface::class);
         $loader->method('load')->willReturn($routes);
@@ -371,6 +426,7 @@ final class RouteUriProviderTest extends TestCase
             $router,
             $paramsProviders ?? $this->createStub(ServiceLocator::class),
             new SiteContext($router->getContext(), $baseUri),
+            $localeSwitcher,
         );
     }
 }

@@ -12,6 +12,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Routing\Exception\InvalidParameterException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Translation\LocaleSwitcher;
 
 /**
  * @internal
@@ -25,6 +26,7 @@ final readonly class RouteUriProvider implements UriProviderInterface
         private RouterInterface $router,
         private ServiceLocator $paramsProviders,
         private SiteContext $siteContext,
+        private ?LocaleSwitcher $localeSwitcher = null,
     ) {
     }
 
@@ -33,8 +35,8 @@ final readonly class RouteUriProvider implements UriProviderInterface
         try {
             $this->siteContext->enter();
 
-            foreach ($this->generatableRoutes($filter) as $routeName => $params) {
-                if (null === $params) {
+            foreach ($this->generatableRoutes($filter) as $routeName => $source) {
+                if (null === $source) {
                     $uri = $this->stripBasePath($this->generate($routeName, []));
                     if ($filter->matchesPath($uri)) {
                         yield $uri;
@@ -43,7 +45,9 @@ final readonly class RouteUriProvider implements UriProviderInterface
                     continue;
                 }
 
-                foreach ($this->getParamsList($params) as $paramSet) {
+                [$params, $locale] = $source;
+
+                foreach ($this->getParamsList($params, $locale) as $paramSet) {
                     try {
                         $uri = $this->router->generate($routeName, $paramSet, RouterInterface::ABSOLUTE_PATH);
                     } catch (MissingMandatoryParametersException|InvalidParameterException $exception) {
@@ -92,9 +96,13 @@ final readonly class RouteUriProvider implements UriProviderInterface
     /**
      * Validates every prerenderable route up front, so a misconfiguration aborts before any
      * page is written, and maps each route to null (a single page) or the source of its
-     * parameter sets.
+     * parameter sets along with the locale the route is bound to.
      *
-     * @return array<string, class-string<ParamsProviderInterface>|list<array<string, mixed>>|null>
+     * A localized route (one path per locale) is bound to its "_locale" default, so its params
+     * provider runs in it and can yield locale-dependent values, such as translated slugs. A
+     * route with a "{_locale}" placeholder serves every locale, so it is not bound to any.
+     *
+     * @return array<string, array{class-string<ParamsProviderInterface>|list<array<string, mixed>>, ?string}|null>
      */
     private function generatableRoutes(GenerationFilter $filter): array
     {
@@ -106,7 +114,8 @@ final readonly class RouteUriProvider implements UriProviderInterface
                 continue;
             }
 
-            if (!$filter->matchesRoute($routeName)) {
+            $canonicalName = $route->getDefault('_canonical_route');
+            if (!$filter->matchesRoute($routeName, \is_string($canonicalName) ? $canonicalName : null)) {
                 continue;
             }
 
@@ -119,7 +128,8 @@ final readonly class RouteUriProvider implements UriProviderInterface
                 throw new InvalidConfigurationException(\sprintf('Expected route "%s" to be stateless.', $routeName));
             }
 
-            if ([] === $route->compile()->getPathVariables() || true === $config) {
+            $pathVariables = $route->compile()->getPathVariables();
+            if ([] === $pathVariables || true === $config) {
                 $routes[$routeName] = null;
 
                 continue;
@@ -131,7 +141,9 @@ final readonly class RouteUriProvider implements UriProviderInterface
 
             /** @var class-string<ParamsProviderInterface>|list<array<string, mixed>> $params */
             $params = $config['params'];
-            $routes[$routeName] = $params;
+            $locale = $route->getDefault('_locale');
+            $boundLocale = \is_string($locale) && !\in_array('_locale', $route->compile()->getVariables(), true) ? $locale : null;
+            $routes[$routeName] = [$params, $boundLocale];
         }
 
         return $routes;
@@ -196,7 +208,7 @@ final readonly class RouteUriProvider implements UriProviderInterface
      *
      * @return iterable<array<string, mixed>>
      */
-    private function getParamsList(array|string $params): iterable
+    private function getParamsList(array|string $params, ?string $locale): iterable
     {
         if (\is_string($params)) {
             $serviceId = $params;
@@ -210,7 +222,13 @@ final readonly class RouteUriProvider implements UriProviderInterface
             }
 
             // Drained up front: a suspended provider would be caught by the reset between pages.
-            return iterator_to_array($paramsProvider->provideParameterSets(), false);
+            $drain = static fn (): array => iterator_to_array($paramsProvider->provideParameterSets(), false);
+
+            if (null !== $this->localeSwitcher && null !== $locale) {
+                return $this->localeSwitcher->runWithLocale($locale, $drain);
+            }
+
+            return $drain();
         }
 
         return $params;

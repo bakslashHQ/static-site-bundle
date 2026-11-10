@@ -29,7 +29,7 @@ final readonly class ListStaticSiteCommand
      */
     public function __invoke(
         SymfonyStyle $io,
-        #[Option(description: 'Only list routes whose name matches this glob (repeatable).')]
+        #[Option(description: 'Only list routes whose name, or canonical name for a localized route, matches this glob (repeatable).')]
         array $route = [],
         #[Option(description: 'Only list URIs matching this glob (repeatable).')]
         array $path = [],
