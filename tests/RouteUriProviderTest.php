@@ -354,26 +354,27 @@ final class RouteUriProviderTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string, bool, list<string>}>
+     * @return iterable<string, array{0: string, 1: bool, 2: list<string>, 3?: string}>
      */
     public static function localizedRouteProvider(): iterable
     {
         yield 'localized route' => ['/fr/article/{slug}', true, ['/fr/article/fr']];
         yield 'no locale switcher' => ['/fr/article/{slug}', false, ['/fr/article/en']];
         yield 'locale placeholder' => ['/{_locale}/article/{slug}', true, ['/fr/article/en']];
+        yield 'locale placeholder in host' => ['/article/{slug}', true, ['/article/en'], '{_locale}.example.com'];
     }
 
     /**
      * @param list<string> $expectedUris
      */
     #[DataProvider('localizedRouteProvider')]
-    public function testRunsTheParamsProviderOfALocalizedRouteInItsLocale(string $path, bool $withLocaleSwitcher, array $expectedUris): void
+    public function testRunsTheParamsProviderOfALocalizedRouteInItsLocale(string $path, bool $withLocaleSwitcher, array $expectedUris, string $host = ''): void
     {
         $routes = new RouteCollection();
         $routes->add('article.fr', new Route($path, [
             '_locale' => 'fr',
             '_static_generation' => ['params' => 'slugs'],
-        ]));
+        ], host: $host));
 
         $localeSwitcher = new LocaleSwitcher('en', []);
 
@@ -384,9 +385,9 @@ final class RouteUriProviderTest extends TestCase
         $paramsProviders->method('has')->willReturnMap([['slugs', true]]);
         $paramsProviders->method('get')->willReturnMap([['slugs', $paramsProvider]]);
 
-        $provider = $this->createProvider($routes, $paramsProviders, localeSwitcher: $withLocaleSwitcher ? $localeSwitcher : null);
+        $provider = $this->createProvider($routes, $paramsProviders, baseUri: 'https://fr.example.com', localeSwitcher: $withLocaleSwitcher ? $localeSwitcher : null);
 
-        // "fr" comes from the route defaults when the path has a "{_locale}" placeholder.
+        // "fr" comes from the route defaults when the route has a "{_locale}" placeholder.
         $this->assertSame($expectedUris, iterator_to_array($provider->provide()));
         $this->assertSame('en', $localeSwitcher->getLocale());
     }
