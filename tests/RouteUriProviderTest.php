@@ -217,6 +217,55 @@ final class RouteUriProviderTest extends TestCase
         yield 'fragment' => [['_fragment' => 'top'], '/article/extra#top'];
     }
 
+    public function testYieldsAFailureWhenAParameterSetTargetsAnotherHostOrScheme(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('tenant', new Route('/article/{slug}', ['_static_generation' => [
+            'params' => [['tenant' => 'localhost', 'slug' => 'ok'], ['tenant' => 'fr.example.com', 'slug' => 'other']],
+        ]], ['tenant' => '.+'], host: '{tenant}'));
+        $routes->add('secure', new Route('/secure/{slug}', ['_static_generation' => [
+            'params' => [['slug' => 'ok']],
+        ]], schemes: ['https']));
+
+        $results = iterator_to_array($this->createProvider($routes)->provide(), false);
+
+        $this->assertSame('/article/ok', $results[0]);
+        $this->assertInstanceOf(UriGenerationFailure::class, $results[1]);
+        $this->assertSame('Expected route "tenant" to generate a path on the site host, got "//fr.example.com/article/other"; a static site cannot serve another host or scheme.', $results[1]->error->getMessage());
+        $this->assertInstanceOf(UriGenerationFailure::class, $results[2]);
+        $this->assertSame('Expected route "secure" to generate a path on the site host, got "https://localhost/secure/ok"; a static site cannot serve another host or scheme.', $results[2]->error->getMessage());
+    }
+
+    public function testThrowsWhenARouteWithoutParametersTargetsAnotherHost(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('other', new Route('/other', ['_static_generation' => true], host: 'other.example.com'));
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageToBe('Expected route "other" to generate a path on the site host, got "//other.example.com/other"; a static site cannot serve another host or scheme.');
+
+        iterator_to_array($this->createProvider($routes)->provide());
+    }
+
+    public function testAcceptsARouteBoundToTheSiteHostUnderABasePath(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('same', new Route('/same', ['_static_generation' => true], host: 'example.com'));
+
+        $this->assertSame(['/same'], iterator_to_array($this->createProvider($routes, baseUri: 'https://example.com/docs')->provide()));
+    }
+
+    public function testThrowsWhenARouteTargetsAnotherHostUnderABasePath(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('other', new Route('/other', ['_static_generation' => true], host: 'other.example.com'));
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageToBe('Expected route "other" to generate a path on the site host, got "//other.example.com/docs/other"; a static site cannot serve another host or scheme.');
+
+        iterator_to_array($this->createProvider($routes, baseUri: 'https://example.com/docs')->provide());
+    }
+
     public function testFiltersByRouteName(): void
     {
         $routes = new RouteCollection();

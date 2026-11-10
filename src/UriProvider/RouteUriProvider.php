@@ -62,6 +62,12 @@ final readonly class RouteUriProvider implements UriProviderInterface
                         continue;
                     }
 
+                    if (null !== $error = $this->offSiteError($routeName, $uri)) {
+                        yield new UriGenerationFailure($this->pageIdentifier($routeName, $paramSet), $error);
+
+                        continue;
+                    }
+
                     // Parameters the route has no placeholder for land in the query string.
                     if (false !== strpbrk($uri, '?#')) {
                         yield new UriGenerationFailure(
@@ -146,7 +152,24 @@ final readonly class RouteUriProvider implements UriProviderInterface
             throw new InvalidConfigurationException(\sprintf('Expected route "%s" to generate a URI, got an empty one; its defaults do not satisfy the route requirements.', $routeName));
         }
 
+        if (null !== $error = $this->offSiteError($routeName, $uri)) {
+            throw $error;
+        }
+
         return $uri;
+    }
+
+    /**
+     * The generator falls back to a network path ("//host/path") or an absolute URL when the
+     * route requires a host or scheme other than the site's, which no written file can serve.
+     */
+    private function offSiteError(string $routeName, string $uri): ?InvalidConfigurationException
+    {
+        if (str_starts_with($uri, '/') && !str_starts_with($uri, '//')) {
+            return null;
+        }
+
+        return new InvalidConfigurationException(\sprintf('Expected route "%s" to generate a path on the site host, got "%s"; a static site cannot serve another host or scheme.', $routeName, $uri));
     }
 
     /**

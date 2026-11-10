@@ -182,6 +182,11 @@ are written; anything else fails the page, as does any other non-2xx response. B
 redirect handling, don't prerender authenticated routes: an unauthenticated generation request
 would capture their login redirect.
 
+Every page is served from the site's `base_uri`. A route requiring another host (a fixed
+`host`, or a `{placeholder}` in it that resolves elsewhere) or another scheme generates a
+URL no written file can answer, so it fails: a route without parameters aborts the run, and
+each offending parameter set fails its own page.
+
 For a custom error page, prerender a `/404.html` route returning a 200 response with your
 error markup (the server sets the actual status). Giving the route the `.html` extension keeps
 it a file rather than a directory under `clean_urls`, which is what the configurations below,

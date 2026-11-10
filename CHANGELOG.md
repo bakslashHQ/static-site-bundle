@@ -9,6 +9,9 @@
   directories keep their mode: remove them, or run `chmod -R u=rwX,go=rX` on them once (#3).
 - Add a `bakslash_static_site.filesystem.visibility` service, to redefine for other modes of a
   local `storage`.
+- Report a route that targets another host or scheme than the site's as such, instead of
+  failing its pages with an unrelated "No route found" rendering error. Such a route without
+  parameters now aborts the run; each offending parameter set fails its own page.
 
 ## 0.1.0
 
